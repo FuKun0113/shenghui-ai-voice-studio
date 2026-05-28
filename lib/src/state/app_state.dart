@@ -8,10 +8,8 @@ import '../services/local_voice_store.dart';
 import '../services/mock_mimo_service.dart';
 
 class AppState extends ChangeNotifier {
-  AppState({
-    required this.mimoService,
-    LocalVoiceStore? voiceStore,
-  }) : _voiceStore = voiceStore ?? LocalVoiceStore() {
+  AppState({required this.mimoService, LocalVoiceStore? voiceStore})
+    : _voiceStore = voiceStore ?? LocalVoiceStore() {
     _voices = _voiceStore.builtinVoices();
     _selectedVoiceId = _voices.first.id;
   }

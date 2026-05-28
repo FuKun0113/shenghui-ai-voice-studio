@@ -8,7 +8,9 @@ void main() {
   testWidgets('generates speech and shows player', (tester) async {
     final state = AppState(mimoService: MockMimoService());
     await tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: GenerateScreen(appState: state))),
+      MaterialApp(
+        home: Scaffold(body: GenerateScreen(appState: state)),
+      ),
     );
 
     await tester.enterText(find.byType(TextField).first, '欢迎使用 AI 语音工作台。');

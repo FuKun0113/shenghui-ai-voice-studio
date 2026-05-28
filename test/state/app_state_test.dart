@@ -14,19 +14,21 @@ void main() {
     expect(state.selectedVoice, isNotNull);
   });
 
-  test('saving a designed voice stores reference audio and routes through clone',
-      () async {
-    final state = AppState(mimoService: MockMimoService());
+  test(
+    'saving a designed voice stores reference audio and routes through clone',
+    () async {
+      final state = AppState(mimoService: MockMimoService());
 
-    final voice = await state.designVoice(
-      name: '温柔旁白',
-      stylePrompt: '年轻女性，温柔，清晰',
-    );
+      final voice = await state.designVoice(
+        name: '温柔旁白',
+        stylePrompt: '年轻女性，温柔，清晰',
+      );
 
-    expect(voice.type, VoiceType.designed);
-    expect(voice.referenceAudioPath, contains('designed-voice'));
-    expect(state.voices.any((item) => item.id == voice.id), isTrue);
-  });
+      expect(voice.type, VoiceType.designed);
+      expect(voice.referenceAudioPath, contains('designed-voice'));
+      expect(state.voices.any((item) => item.id == voice.id), isTrue);
+    },
+  );
 
   test('generated audio is appended to history', () async {
     final state = AppState(mimoService: MockMimoService());

@@ -7,7 +7,7 @@ import 'audio_validator.dart';
 
 class AudioInputService {
   AudioInputService({AudioRecorder? recorder})
-      : _recorder = recorder ?? AudioRecorder();
+    : _recorder = recorder ?? AudioRecorder();
 
   final AudioRecorder _recorder;
 

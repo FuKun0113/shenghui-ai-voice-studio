@@ -3,11 +3,7 @@ import '../domain/voice.dart';
 class LocalVoiceStore {
   List<Voice> builtinVoices() {
     return <Voice>[
-      Voice.builtin(
-        id: 'mimo-mia',
-        name: 'Mia',
-        providerVoiceId: 'mimo_mia',
-      ),
+      Voice.builtin(id: 'mimo-mia', name: 'Mia', providerVoiceId: 'mimo_mia'),
       Voice.builtin(
         id: 'mimo-chloe',
         name: 'Chloe',

@@ -8,7 +8,9 @@ void main() {
   testWidgets('settings shows backend and direct api options', (tester) async {
     final state = AppState(mimoService: MockMimoService());
     await tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: SettingsScreen(appState: state))),
+      MaterialApp(
+        home: Scaffold(body: SettingsScreen(appState: state)),
+      ),
     );
 
     expect(find.text('MiMo 服务'), findsOneWidget);

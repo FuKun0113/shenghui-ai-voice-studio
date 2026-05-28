@@ -8,9 +8,9 @@ class ServiceConfig {
   });
 
   const ServiceConfig.backend()
-      : mode = ServiceMode.backendProxy,
-        backendUrl = '',
-        hasApiKey = false;
+    : mode = ServiceMode.backendProxy,
+      backendUrl = '',
+      hasApiKey = false;
 
   final ServiceMode mode;
   final String? backendUrl;

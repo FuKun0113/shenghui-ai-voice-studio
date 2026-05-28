@@ -49,7 +49,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
               onPressed: () {},
               icon: const Icon(Icons.play_arrow),
             ),
-            title: Text(item.text, maxLines: 1, overflow: TextOverflow.ellipsis),
+            title: Text(
+              item.text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             subtitle: Text(
               '${item.voiceName} · ${(item.durationMs / 1000).toStringAsFixed(1)} 秒',
             ),

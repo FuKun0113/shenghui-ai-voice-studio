@@ -98,12 +98,13 @@ class _VoiceList extends StatelessWidget {
           selected: appState.selectedVoice?.id == voice.id,
           onUse: () => appState.selectVoice(voice.id),
           onPreview: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('试听 ${voice.name}')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('试听 ${voice.name}')));
           },
-          onDelete:
-              voice.isUserCreated ? () => appState.deleteVoice(voice.id) : null,
+          onDelete: voice.isUserCreated
+              ? () => appState.deleteVoice(voice.id)
+              : null,
         );
       },
     );

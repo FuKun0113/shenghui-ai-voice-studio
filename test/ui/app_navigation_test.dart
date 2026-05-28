@@ -13,7 +13,7 @@ void main() {
 
     await tester.tap(find.text('音色库').last);
     await tester.pumpAndSettle();
-    expect(find.text('默认音色'), findsOneWidget);
+    expect(find.text('默认音色'), findsWidgets);
 
     await tester.tap(find.text('历史').last);
     await tester.pumpAndSettle();

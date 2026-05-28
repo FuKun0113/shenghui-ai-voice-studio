@@ -1,7 +1,8 @@
 import 'package:just_audio/just_audio.dart';
 
 class AudioPlaybackService {
-  AudioPlaybackService({AudioPlayer? player}) : _player = player ?? AudioPlayer();
+  AudioPlaybackService({AudioPlayer? player})
+    : _player = player ?? AudioPlayer();
 
   final AudioPlayer _player;
 

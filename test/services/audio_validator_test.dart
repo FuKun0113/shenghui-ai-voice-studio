@@ -16,7 +16,13 @@ void main() {
   });
 
   test('returns the original path for supported reference audio', () {
-    expect(AudioValidator.requireSupported('/tmp/reference.wav'), '/tmp/reference.wav');
-    expect(AudioValidator.requireSupported('/tmp/reference.mp3'), '/tmp/reference.mp3');
+    expect(
+      AudioValidator.requireSupported('/tmp/reference.wav'),
+      '/tmp/reference.wav',
+    );
+    expect(
+      AudioValidator.requireSupported('/tmp/reference.mp3'),
+      '/tmp/reference.mp3',
+    );
   });
 }

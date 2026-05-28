@@ -35,7 +35,10 @@ class _AppShellState extends State<AppShell> {
         onDestinationSelected: (value) => setState(() => _index = value),
         destinations: const <NavigationDestination>[
           NavigationDestination(icon: Icon(Icons.graphic_eq), label: '生成'),
-          NavigationDestination(icon: Icon(Icons.record_voice_over), label: '音色库'),
+          NavigationDestination(
+            icon: Icon(Icons.record_voice_over),
+            label: '音色库',
+          ),
           NavigationDestination(icon: Icon(Icons.history), label: '历史'),
           NavigationDestination(icon: Icon(Icons.settings), label: '设置'),
         ],
