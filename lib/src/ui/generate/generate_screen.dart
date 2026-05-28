@@ -98,6 +98,7 @@ class _GenerateScreenState extends State<GenerateScreen> {
           AudioPlayerBar(
             title: '播放生成结果',
             subtitle: _lastAudio!.voiceName,
+            audioPath: _lastAudio!.audioPath,
           ),
         ],
       ],

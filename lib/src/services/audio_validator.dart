@@ -14,10 +14,11 @@ class AudioValidator {
     return AudioFormat.fromPath(path);
   }
 
-  static void requireSupported(String path) {
+  static String requireSupported(String path) {
     final format = detectFormat(path);
     if (format == AudioFormat.unsupported) {
       throw UnsupportedAudioFormatException(path);
     }
+    return path;
   }
 }

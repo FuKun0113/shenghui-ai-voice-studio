@@ -14,20 +14,18 @@ class SettingsScreen extends StatelessWidget {
       children: <Widget>[
         Text('MiMo 服务', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
-        Card(
+        const Card(
           child: Column(
-            children: const <Widget>[
-              RadioListTile<String>(
-                value: 'backend',
-                groupValue: 'backend',
-                onChanged: null,
+            children: <Widget>[
+              ListTile(
+                leading: Icon(Icons.cloud_queue),
                 title: Text('后端代理'),
                 subtitle: Text('正式版本推荐，API Key 保存在服务端。'),
+                trailing: Icon(Icons.check_circle),
               ),
-              RadioListTile<String>(
-                value: 'direct',
-                groupValue: 'backend',
-                onChanged: null,
+              Divider(height: 1),
+              ListTile(
+                leading: Icon(Icons.key),
                 title: Text('原型直连 API Key'),
                 subtitle: Text('仅用于本机 Demo，后续可切换到后端代理。'),
               ),

@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:voice_clone_app/src/app/voice_clone_app.dart';
 import 'package:voice_clone_app/src/services/mock_mimo_service.dart';

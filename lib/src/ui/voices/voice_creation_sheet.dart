@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../services/audio_input_service.dart';
 import '../../state/app_state.dart';
 
 class VoiceCreationSheet extends StatefulWidget {
@@ -16,6 +19,8 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _styleController = TextEditingController();
   final TextEditingController _pathController = TextEditingController();
+  final AudioInputService _audioInputService = AudioInputService();
+  bool _recording = false;
   bool _saving = false;
 
   @override
@@ -23,7 +28,28 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
     _nameController.dispose();
     _styleController.dispose();
     _pathController.dispose();
+    unawaited(_audioInputService.dispose());
     super.dispose();
+  }
+
+  Future<void> _pickReferenceAudio() async {
+    final path = await _audioInputService.pickReferenceAudio();
+    if (path != null) {
+      setState(() => _pathController.text = path);
+    }
+  }
+
+  Future<void> _toggleRecording() async {
+    if (_recording) {
+      final path = await _audioInputService.stopRecording();
+      setState(() {
+        _recording = false;
+        if (path != null) _pathController.text = path;
+      });
+    } else {
+      await _audioInputService.startRecording();
+      setState(() => _recording = true);
+    }
   }
 
   Future<void> _save() async {
@@ -86,13 +112,41 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
               ),
             )
           else
-            TextField(
-              key: const Key('referencePathField'),
-              controller: _pathController,
-              decoration: const InputDecoration(
-                labelText: '参考音频路径',
-                border: OutlineInputBorder(),
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const Text('上传 mp3/wav，或直接录制一段清晰的人声。'),
+                const SizedBox(height: 8),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _pickReferenceAudio,
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('上传音频'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _toggleRecording,
+                        icon: Icon(_recording ? Icons.stop : Icons.mic),
+                        label: Text(_recording ? '停止录音' : '开始录音'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  key: const Key('referencePathField'),
+                  controller: _pathController,
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                    labelText: '参考音频',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ),
           const SizedBox(height: 16),
           FilledButton.icon(

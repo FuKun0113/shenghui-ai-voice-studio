@@ -1,30 +1,14 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:voice_clone_app/main.dart';
+import 'package:voice_clone_app/src/app/voice_clone_app.dart';
+import 'package:voice_clone_app/src/services/mock_mimo_service.dart';
+import 'package:voice_clone_app/src/state/app_state.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('app starts on generate screen', (tester) async {
+    final state = AppState(mimoService: MockMimoService());
+    await tester.pumpWidget(VoiceCloneApp(appState: state));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('AI 语音工作台'), findsOneWidget);
+    expect(find.text('输入文本'), findsOneWidget);
   });
 }

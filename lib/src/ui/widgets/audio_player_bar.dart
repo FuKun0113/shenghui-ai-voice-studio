@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../../services/audio_playback_service.dart';
+
 class AudioPlayerBar extends StatelessWidget {
   const AudioPlayerBar({
     super.key,
     required this.title,
     required this.subtitle,
+    this.audioPath,
   });
 
   final String title;
   final String subtitle;
+  final String? audioPath;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +23,11 @@ class AudioPlayerBar extends StatelessWidget {
           children: <Widget>[
             IconButton(
               tooltip: '播放',
-              onPressed: () {},
+              onPressed: audioPath == null
+                  ? null
+                  : () async {
+                      await AudioPlaybackService().playFile(audioPath!);
+                    },
               icon: const Icon(Icons.play_arrow),
             ),
             Expanded(
