@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:voice_clone_app/src/app/voice_clone_app.dart';
 import 'package:voice_clone_app/src/services/mock_mimo_service.dart';
@@ -9,7 +10,10 @@ void main() {
     await tester.pumpWidget(VoiceCloneApp(appState: state));
     await tester.pumpAndSettle();
 
-    expect(find.text('AI 语音工作台'), findsOneWidget);
-    expect(find.text('输入文本'), findsOneWidget);
+    expect(find.byKey(const Key('mainBrandTitle')), findsOneWidget);
+    expect(find.text('声绘'), findsOneWidget);
+    expect(find.byKey(const Key('mainBrandIcon')), findsNothing);
+    expect(find.byKey(const Key('draftTextField')), findsOneWidget);
+    expect(tester.getSize(find.byType(AppBar)).height, 64);
   });
 }

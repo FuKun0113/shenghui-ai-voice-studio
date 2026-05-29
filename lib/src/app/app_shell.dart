@@ -37,19 +37,17 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: <Widget>[
-            SizedBox.square(
-              dimension: 32,
-              child: HugeIcon(
-                icon: HugeIcons.strokeRoundedAiAudio,
-                color: Theme.of(context).colorScheme.primary,
-                size: 30,
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text('AI 语音工作台'),
-          ],
+        titleSpacing: 24,
+        toolbarHeight: 64,
+        title: Text(
+          '声绘',
+          key: const Key('mainBrandTitle'),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontSize: 23,
+            height: 1,
+            fontWeight: FontWeight.w900,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
       ),
       body: SafeArea(

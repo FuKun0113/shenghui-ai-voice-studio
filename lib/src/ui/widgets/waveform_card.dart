@@ -225,29 +225,71 @@ class _FallbackWaveLines extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final heights = <double>[18, 36, 24, 48, 30, 54, 20, 42, 28, 50, 34];
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: <Widget>[
-        for (final entry in heights.indexed)
-          Expanded(
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 120),
-                height: entry.$2,
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                decoration: BoxDecoration(
-                  color: entry.$1 / heights.length <= progress
-                      ? (entry.$1.isEven ? color : accentColor)
-                      : color.withValues(alpha: playing ? 0.34 : 0.28),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-          ),
-      ],
+    return CustomPaint(
+      painter: _FallbackWavePainter(
+        color: color,
+        accentColor: accentColor,
+        progress: progress,
+        playing: playing,
+      ),
     );
+  }
+}
+
+class _FallbackWavePainter extends CustomPainter {
+  _FallbackWavePainter({
+    required this.color,
+    required this.accentColor,
+    required this.progress,
+    required this.playing,
+  });
+
+  final Color color;
+  final Color accentColor;
+  final double progress;
+  final bool playing;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const barCount = 84;
+    final step = size.width / barCount;
+    final activeWidth = size.width * progress.clamp(0, 1);
+    final paint = Paint()..style = PaintingStyle.fill;
+    for (var i = 0; i < barCount; i++) {
+      final normalized = i / (barCount - 1);
+      final wave =
+          (0.42 +
+                  0.26 * (1 - (normalized - 0.52).abs()) +
+                  0.18 * ((i * 37) % 11) / 10 +
+                  0.12 * ((i * 17) % 7) / 6)
+              .clamp(0.12, 0.96);
+      final barHeight = size.height * wave;
+      final x = i * step;
+      final active = x <= activeWidth;
+      paint.color = active
+          ? (i.isEven ? color : accentColor).withValues(alpha: 0.78)
+          : color.withValues(alpha: playing ? 0.26 : 0.18);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            x + step * 0.28,
+            size.height - barHeight,
+            step * 0.44,
+            barHeight,
+          ),
+          const Radius.circular(999),
+        ),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FallbackWavePainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.accentColor != accentColor ||
+        oldDelegate.progress != progress ||
+        oldDelegate.playing != playing;
   }
 }
 

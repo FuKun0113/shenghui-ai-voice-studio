@@ -5,36 +5,59 @@ import 'package:uuid/uuid.dart';
 
 import '../domain/generated_audio.dart';
 import '../domain/generation_request.dart';
+import '../domain/remote_app_config.dart';
 import '../domain/service_config.dart';
+import '../domain/text_optimization_config.dart';
 import '../domain/voice.dart';
 import '../domain/draft_state.dart';
 import '../services/local_draft_store.dart';
 import '../services/local_history_store.dart';
 import '../services/local_voice_store.dart';
 import '../services/mimo_client.dart';
+import '../services/reference_audio_store.dart';
+import '../services/remote_app_config_service.dart';
 import '../services/service_config_store.dart';
+import '../services/text_optimization_config_store.dart';
+import '../services/text_optimization_service.dart';
 
 class AppState extends ChangeNotifier {
   AppState({
     required this.mimoService,
+    TextOptimizationService? textOptimizationService,
     LocalVoiceStore? voiceStore,
     LocalHistoryStore? historyStore,
     LocalDraftStore? draftStore,
+    ReferenceAudioStore? referenceAudioStore,
+    RemoteAppConfigService? remoteAppConfigService,
     ServiceConfig? serviceConfig,
+    TextOptimizationConfig? textOptimizationConfig,
     this.serviceConfigStore,
+    this.textOptimizationConfigStore,
   }) : _voiceStore = voiceStore ?? LocalVoiceStore(),
        _historyStore = historyStore ?? LocalHistoryStore(),
        _draftStore = draftStore ?? LocalDraftStore(),
-       _serviceConfig = serviceConfig ?? const ServiceConfig.directApi() {
+       _referenceAudioStore = referenceAudioStore ?? ReferenceAudioStore(),
+       _remoteAppConfigService =
+           remoteAppConfigService ?? StaticRemoteAppConfigService(),
+       _serviceConfig =
+           serviceConfig?.normalized() ?? const ServiceConfig.directApi(),
+       _textOptimizationService =
+           textOptimizationService ?? OpenAiCompatibleTextOptimizationService(),
+       _textOptimizationConfig =
+           textOptimizationConfig ?? const TextOptimizationConfig() {
     _voices = _voiceStore.builtinVoices();
     _selectedVoiceId = _voices.first.id;
   }
 
   final MimoService mimoService;
+  final TextOptimizationService _textOptimizationService;
   final LocalVoiceStore _voiceStore;
   final LocalHistoryStore _historyStore;
   final LocalDraftStore _draftStore;
+  final ReferenceAudioStore _referenceAudioStore;
+  final RemoteAppConfigService _remoteAppConfigService;
   final LocalServiceConfigStore? serviceConfigStore;
+  final LocalTextOptimizationConfigStore? textOptimizationConfigStore;
   final Uuid _uuid = const Uuid();
 
   late List<Voice> _voices;
@@ -45,7 +68,11 @@ class AppState extends ChangeNotifier {
   String _emotion = '自然';
   String _stylePrompt = '';
   ServiceConfig _serviceConfig;
+  TextOptimizationConfig _textOptimizationConfig;
+  RemoteAppConfig _remoteAppConfig = const RemoteAppConfig.disabled();
   bool _isGenerating = false;
+  bool _isOptimizingText = false;
+  static const String voicePreviewSampleText = '你好，欢迎使用声绘。这是一段用于比较音色的标准试听文本。';
 
   List<Voice> get voices => List<Voice>.unmodifiable(_voices);
   List<GeneratedAudio> get history =>
@@ -55,7 +82,10 @@ class AppState extends ChangeNotifier {
   String get emotion => _emotion;
   String get stylePrompt => _stylePrompt;
   ServiceConfig get serviceConfig => _serviceConfig;
+  TextOptimizationConfig get textOptimizationConfig => _textOptimizationConfig;
+  RemoteAppConfig get remoteAppConfig => _remoteAppConfig;
   bool get isGenerating => _isGenerating;
+  bool get isOptimizingText => _isOptimizingText;
 
   Voice? get selectedVoice {
     for (final voice in _voices) {
@@ -65,6 +95,10 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> loadLocalData() async {
+    final textConfigStore = textOptimizationConfigStore;
+    if (textConfigStore != null) {
+      _textOptimizationConfig = await textConfigStore.load();
+    }
     _voices = await _voiceStore.loadVoices();
     _history
       ..clear()
@@ -75,6 +109,11 @@ class AppState extends ChangeNotifier {
     _speed = draft.speed;
     _emotion = draft.emotion;
     _selectedVoiceId = _resolveSelectedVoiceId(draft.selectedVoiceId);
+    notifyListeners();
+  }
+
+  Future<void> loadRemoteAppConfig() async {
+    _remoteAppConfig = await _remoteAppConfigService.fetch();
     notifyListeners();
   }
 
@@ -110,12 +149,51 @@ class AppState extends ChangeNotifier {
   }
 
   void updateServiceConfig(ServiceConfig value) {
-    _serviceConfig = value;
+    _serviceConfig = value.normalized();
     final store = serviceConfigStore;
+    if (store != null) {
+      unawaited(store.save(_serviceConfig));
+    }
+    notifyListeners();
+  }
+
+  void updateTextOptimizationConfig(TextOptimizationConfig value) {
+    _textOptimizationConfig = value;
+    final store = textOptimizationConfigStore;
     if (store != null) {
       unawaited(store.save(value));
     }
     notifyListeners();
+  }
+
+  Future<List<String>> fetchTextOptimizationModels(
+    TextOptimizationConfig config,
+  ) {
+    return _textOptimizationService.fetchModels(config: config);
+  }
+
+  Future<String> optimizeText({
+    required TextOptimizationTask task,
+    required String inputText,
+    String stylePrompt = '',
+  }) async {
+    final normalized = inputText.trim();
+    if (normalized.isEmpty && task != TextOptimizationTask.writeInstruct) {
+      throw StateError('请输入需要优化的文本');
+    }
+    _isOptimizingText = true;
+    notifyListeners();
+    try {
+      return await _textOptimizationService.optimize(
+        task: task,
+        inputText: normalized,
+        stylePrompt: stylePrompt,
+        config: _textOptimizationConfig,
+      );
+    } finally {
+      _isOptimizingText = false;
+      notifyListeners();
+    }
   }
 
   Future<Voice> designVoice({
@@ -123,12 +201,31 @@ class AppState extends ChangeNotifier {
     required String stylePrompt,
     String? gender,
   }) async {
-    const sampleText = '你好，这是一段用于固定 AI 设计音色的标准试听文本。';
-    final referenceAudioPath = await mimoService.designVoiceReferenceAudio(
+    final referenceAudioPath = await previewDesignedVoice(
       stylePrompt: stylePrompt,
-      sampleText: sampleText,
+    );
+    return saveDesignedVoice(
+      name: name,
+      stylePrompt: stylePrompt,
+      referenceAudioPath: referenceAudioPath,
+      gender: gender,
+    );
+  }
+
+  Future<String> previewDesignedVoice({required String stylePrompt}) {
+    return mimoService.designVoiceReferenceAudio(
+      stylePrompt: stylePrompt,
+      sampleText: voicePreviewSampleText,
       config: _serviceConfig,
     );
+  }
+
+  Future<Voice> saveDesignedVoice({
+    required String name,
+    required String stylePrompt,
+    required String referenceAudioPath,
+    String? gender,
+  }) async {
     final now = DateTime.now();
     final voice = Voice.designed(
       id: _uuid.v4(),
@@ -151,15 +248,34 @@ class AppState extends ChangeNotifier {
   Future<Voice> saveClonedVoice({
     required String name,
     required String referenceAudioPath,
+    String? previewAudioPath,
     String? gender,
   }) async {
     final now = DateTime.now();
+    final id = _uuid.v4();
+    final managedReferencePath = await _referenceAudioStore
+        .persistReferenceAudio(referenceAudioPath);
+    final normalizedGender = _normalizedGender(gender);
+    final tags = _userVoiceTags(gender);
+    final previewPath =
+        previewAudioPath ??
+        (await _generateVoicePreviewAudio(
+          Voice.cloned(
+            id: id,
+            name: name,
+            referenceAudioPath: managedReferencePath,
+            gender: normalizedGender,
+            tags: tags,
+            createdAt: now,
+          ),
+        )).audioPath;
     final voice = Voice.cloned(
-      id: _uuid.v4(),
+      id: id,
       name: name,
-      referenceAudioPath: referenceAudioPath,
-      gender: _normalizedGender(gender),
-      tags: _userVoiceTags(gender),
+      referenceAudioPath: managedReferencePath,
+      previewAudioPath: previewPath,
+      gender: normalizedGender,
+      tags: tags,
       createdAt: now,
     );
     _voices = <Voice>[..._voices, voice];
@@ -168,6 +284,31 @@ class AppState extends ChangeNotifier {
     _persistDraft();
     notifyListeners();
     return voice;
+  }
+
+  Future<({String referenceAudioPath, String previewAudioPath})>
+  previewClonedVoice({
+    required String name,
+    required String referenceAudioPath,
+    String? gender,
+  }) async {
+    final managedReferencePath = await _referenceAudioStore
+        .persistReferenceAudio(referenceAudioPath);
+    final now = DateTime.now();
+    final previewAudio = await _generateVoicePreviewAudio(
+      Voice.cloned(
+        id: 'preview-${_uuid.v4()}',
+        name: name.trim().isEmpty ? '未命名音色' : name.trim(),
+        referenceAudioPath: managedReferencePath,
+        gender: _normalizedGender(gender),
+        tags: _userVoiceTags(gender),
+        createdAt: now,
+      ),
+    );
+    return (
+      referenceAudioPath: managedReferencePath,
+      previewAudioPath: previewAudio.audioPath,
+    );
   }
 
   void deleteVoice(String voiceId) {
@@ -201,12 +342,27 @@ class AppState extends ChangeNotifier {
     if (voice == null) {
       throw StateError('原音色已不存在，请重新选择音色');
     }
-    return _generateTextWithVoice(
+    final generated = await _requestGeneratedAudioWithVoice(
       text: audio.text,
       voice: voice,
-      stylePromptOverride: audio.stylePrompt ?? _stylePrompt,
+      stylePrompt: audio.stylePrompt ?? _stylePrompt,
       title: audio.title,
     );
+    final replacement = generated.copyWith(
+      id: audio.id,
+      title: audio.title,
+      favorite: audio.favorite,
+    );
+    final index = _history.indexWhere((item) => item.id == audio.id);
+    if (index >= 0) {
+      _history[index] = replacement;
+    } else {
+      _history.insert(0, replacement);
+    }
+    unawaited(_historyStore.saveHistory(_history));
+    _markVoiceRecentlyUsed(voice.id);
+    notifyListeners();
+    return replacement;
   }
 
   Future<GeneratedAudio> _generateTextWithVoice({
@@ -215,24 +371,15 @@ class AppState extends ChangeNotifier {
     String? stylePromptOverride,
     String? title,
   }) async {
-    final normalizedText = text.trim();
-    if (normalizedText.isEmpty) {
-      throw StateError('请输入要生成的文本');
-    }
     _isGenerating = true;
     notifyListeners();
     try {
-      final request = GenerationRequest.fromVoice(
-        text: normalizedText,
+      final generated = await _requestGeneratedAudioWithVoice(
+        text: text,
         voice: voice,
-        speed: 1.0,
-        emotion: _emotion,
         stylePrompt: stylePromptOverride ?? _stylePrompt,
+        title: title,
       );
-      final generated = (await mimoService.generateSpeech(
-        request: request,
-        config: _serviceConfig,
-      )).copyWith(title: title);
       _history.insert(0, generated);
       unawaited(_historyStore.saveHistory(_history));
       _markVoiceRecentlyUsed(voice.id);
@@ -243,9 +390,36 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<GeneratedAudio> previewVoice(Voice voice) {
+  Future<GeneratedAudio> _requestGeneratedAudioWithVoice({
+    required String text,
+    required Voice voice,
+    String? stylePrompt,
+    String? title,
+  }) async {
+    final normalizedText = text.trim();
+    if (normalizedText.isEmpty) {
+      throw StateError('请输入要生成的文本');
+    }
     final request = GenerationRequest.fromVoice(
-      text: '你好，这是一段 MiMo 官方音色试听。',
+      text: normalizedText,
+      voice: voice,
+      speed: 1.0,
+      emotion: _emotion,
+      stylePrompt: stylePrompt ?? _stylePrompt,
+    );
+    return (await mimoService.generateSpeech(
+      request: request,
+      config: _serviceConfig,
+    )).copyWith(title: title);
+  }
+
+  Future<GeneratedAudio> previewVoice(Voice voice) {
+    return _generateVoicePreviewAudio(voice);
+  }
+
+  Future<GeneratedAudio> _generateVoicePreviewAudio(Voice voice) {
+    final request = GenerationRequest.fromVoice(
+      text: voicePreviewSampleText,
       voice: voice,
       speed: 1.0,
       emotion: '自然',

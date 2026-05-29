@@ -75,4 +75,33 @@ void main() {
 
     expect(find.textContaining('请输入音色名称'), findsOneWidget);
   });
+
+  testWidgets('clone mode offers generated preview controls before saving', (
+    tester,
+  ) async {
+    final state = AppState(mimoService: MockMimoService());
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                builder: (_) => VoiceCreationSheet(appState: state),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('克隆音色'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('生成试听'), findsOneWidget);
+    expect(find.text('播放试听'), findsOneWidget);
+  });
 }

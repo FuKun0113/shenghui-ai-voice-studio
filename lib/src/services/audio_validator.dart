@@ -44,7 +44,7 @@ class AudioValidator {
     }
     final estimatedBase64Bytes = ((fileBytes + 2) ~/ 3) * 4;
     if (estimatedBase64Bytes > maxBase64Bytes) {
-      return const AudioValidationResult.invalid('参考音频超过 MiMo 10 MB Base64 限制');
+      return const AudioValidationResult.invalid('参考音频超过 10 MB Base64 限制');
     }
     return AudioValidationResult.valid(path);
   }

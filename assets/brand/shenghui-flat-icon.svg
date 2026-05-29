@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Shenghui flat app icon</title>
+  <rect width="1024" height="1024" rx="220" fill="#D2FBF4"/>
+  <rect x="62" y="62" width="900" height="900" rx="190" fill="#EFFFFB" opacity="0.72"/>
+  <rect x="172" y="196" width="680" height="632" rx="152" fill="#CFF8F1" stroke="#8CECE1" stroke-width="18"/>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="284" y="336" width="360" height="360" rx="78" stroke="#263232" stroke-width="28"/>
+
+    <path d="M366 510v16" stroke="#263232" stroke-width="26"/>
+    <path d="M416 474v88" stroke="#263232" stroke-width="26"/>
+    <path d="M466 440v156" stroke="#263232" stroke-width="26"/>
+    <path d="M516 474v88" stroke="#263232" stroke-width="26"/>
+    <path d="M566 510v16" stroke="#263232" stroke-width="26"/>
+
+    <path d="M554 638c54-9 101-38 134-82 24-31 48-47 86-48" stroke="#009688" stroke-width="34"/>
+    <path d="M719 280c10 53 31 74 84 84-53 10-74 31-84 84-10-53-31-74-84-84 53-10 74-31 84-84Z" stroke="#009688" stroke-width="24"/>
+    <path d="M785 300l34-34" stroke="#009688" stroke-width="22"/>
+    <path d="M626 467l-22 22" stroke="#009688" stroke-width="22"/>
+  </g>
+</svg>

@@ -20,5 +20,10 @@ void main() {
     expect(theme.scaffoldBackgroundColor, const Color(0xFFF6F8FB));
     expect(theme.colorScheme.secondary, const Color(0xFF5067F2));
     expect(theme.colorScheme.tertiary, const Color(0xFFFF7A59));
+    expect(theme.snackBarTheme.behavior, SnackBarBehavior.floating);
+    expect(theme.snackBarTheme.shape, isA<RoundedRectangleBorder>());
+    expect(theme.dialogTheme.shape, isA<RoundedRectangleBorder>());
+    expect(theme.bottomSheetTheme.shape, isA<RoundedRectangleBorder>());
+    expect(theme.popupMenuTheme.shape, isA<RoundedRectangleBorder>());
   });
 }

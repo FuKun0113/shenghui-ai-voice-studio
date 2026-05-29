@@ -18,6 +18,20 @@ class VoiceCreationSheet extends StatefulWidget {
   State<VoiceCreationSheet> createState() => _VoiceCreationSheetState();
 }
 
+class VoiceCreationScreen extends StatelessWidget {
+  const VoiceCreationScreen({super.key, required this.appState});
+
+  final AppState appState;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('创建音色')),
+      body: SafeArea(child: VoiceCreationSheet(appState: appState)),
+    );
+  }
+}
+
 class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
   static const String _readAloudPrompt =
       '请跟读：今天的天气很好，我正在用自然稳定的声音录制一段样本，帮助系统学习我的音色。';
@@ -32,6 +46,13 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
   bool _showReadPrompt = false;
   bool _referencePlaying = false;
   bool _saving = false;
+  bool _generatingPreview = false;
+  bool _generatingClonePreview = false;
+  bool _designPreviewPlaying = false;
+  bool _clonePreviewPlaying = false;
+  String? _designPreviewPath;
+  String? _clonePreviewPath;
+  String? _managedReferencePath;
   String? _formError;
   String? _validationMessage;
 
@@ -110,19 +131,142 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
     }
     setState(() => _saving = true);
     if (_designMode) {
-      await widget.appState.designVoice(
+      final previewPath =
+          _designPreviewPath ??
+          await widget.appState.previewDesignedVoice(
+            stylePrompt: _styleController.text.trim(),
+          );
+      await widget.appState.saveDesignedVoice(
         name: name,
         stylePrompt: _styleController.text.trim(),
+        referenceAudioPath: previewPath,
         gender: _gender,
       );
     } else {
       await widget.appState.saveClonedVoice(
         name: name,
-        referenceAudioPath: _pathController.text.trim(),
+        referenceAudioPath:
+            _managedReferencePath ?? _pathController.text.trim(),
+        previewAudioPath: _clonePreviewPath,
         gender: _gender,
       );
     }
     if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _generateDesignPreview() async {
+    final stylePrompt = _styleController.text.trim();
+    if (stylePrompt.isEmpty) {
+      setState(() => _formError = '请先填写音色描述');
+      return;
+    }
+    setState(() {
+      _formError = null;
+      _generatingPreview = true;
+      _designPreviewPlaying = false;
+    });
+    try {
+      final path = await widget.appState.previewDesignedVoice(
+        stylePrompt: stylePrompt,
+      );
+      if (!mounted) return;
+      setState(() {
+        _designPreviewPath = path;
+        _generatingPreview = false;
+      });
+      await AudioPlaybackService.instance.playFile(path);
+      if (mounted) setState(() => _designPreviewPlaying = true);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _generatingPreview = false;
+        _formError = '试听生成失败：$error';
+      });
+    }
+  }
+
+  Future<void> _toggleDesignPreviewPlayback() async {
+    final path = _designPreviewPath;
+    if (path == null || path.isEmpty) return;
+    if (_designPreviewPlaying) {
+      await AudioPlaybackService.instance.pause();
+      if (mounted) setState(() => _designPreviewPlaying = false);
+      return;
+    }
+    try {
+      await AudioPlaybackService.instance.playFile(path);
+      if (mounted) setState(() => _designPreviewPlaying = true);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _designPreviewPlaying = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('试听播放失败：$error')));
+    }
+  }
+
+  Future<void> _generateClonePreview() async {
+    final path = _pathController.text.trim();
+    if (path.isEmpty) {
+      setState(() => _formError = '请先录制或上传参考音频');
+      return;
+    }
+    final validation = await AudioValidator.validateReferenceFile(path);
+    if (!validation.isValid) {
+      setState(() {
+        _formError = validation.message;
+        _validationMessage = validation.message;
+      });
+      return;
+    }
+    setState(() {
+      _formError = null;
+      _generatingClonePreview = true;
+      _clonePreviewPlaying = false;
+    });
+    try {
+      final preview = await widget.appState.previewClonedVoice(
+        name: _nameController.text.trim(),
+        referenceAudioPath: path,
+        gender: _gender,
+      );
+      if (!mounted) return;
+      setState(() {
+        _managedReferencePath = preview.referenceAudioPath;
+        _pathController.text = preview.referenceAudioPath;
+        _clonePreviewPath = preview.previewAudioPath;
+        _generatingClonePreview = false;
+        _validationMessage = '参考音频已保存到本机，可用于后续生成';
+      });
+      await AudioPlaybackService.instance.playFile(preview.previewAudioPath);
+      if (mounted) setState(() => _clonePreviewPlaying = true);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _generatingClonePreview = false;
+        _formError = '试听生成失败：$error';
+      });
+    }
+  }
+
+  Future<void> _toggleClonePreviewPlayback() async {
+    final path = _clonePreviewPath;
+    if (path == null || path.isEmpty) return;
+    if (_clonePreviewPlaying) {
+      await AudioPlaybackService.instance.pause();
+      if (mounted) setState(() => _clonePreviewPlaying = false);
+      return;
+    }
+    try {
+      await AudioPlaybackService.instance.playFile(path);
+      if (mounted) setState(() => _clonePreviewPlaying = true);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _clonePreviewPlaying = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('试听播放失败：$error')));
+    }
   }
 
   Future<void> _setReferencePath(String path) async {
@@ -132,6 +276,9 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
       _validationMessage = validation.message;
       _formError = validation.isValid ? null : validation.message;
       _referencePlaying = false;
+      _clonePreviewPlaying = false;
+      _clonePreviewPath = null;
+      _managedReferencePath = null;
     });
   }
 
@@ -143,213 +290,251 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.only(
-        left: 14,
-        right: 14,
-        top: 12,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+        left: 16,
+        right: 16,
+        top: 8,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
       ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: scheme.outlineVariant.withValues(alpha: 0.5),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const SectionHeader(
+            title: '创建音色',
+            subtitle: '设计音色会先生成试听参考音频，再用克隆能力复用。',
           ),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: scheme.shadow.withValues(alpha: 0.16),
-              blurRadius: 32,
-              offset: const Offset(0, 18),
+          const SizedBox(height: 14),
+          SegmentedButton<bool>(
+            segments: const <ButtonSegment<bool>>[
+              ButtonSegment<bool>(
+                value: true,
+                icon: AppHugeIcon(HugeIcons.strokeRoundedMagicWand02),
+                label: Text('设计音色'),
+              ),
+              ButtonSegment<bool>(
+                value: false,
+                icon: AppHugeIcon(HugeIcons.strokeRoundedMic01),
+                label: Text('克隆音色'),
+              ),
+            ],
+            selected: <bool>{_designMode},
+            onSelectionChanged: (values) =>
+                setState(() => _designMode = values.first),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('voiceNameField'),
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: '音色名称',
+              prefixIcon: AppPrefixIcon(HugeIcons.strokeRoundedBadge),
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                const SectionHeader(
-                  title: '创建音色',
-                  subtitle: '设计音色会先生成试听参考音频，再用克隆能力复用。',
-                ),
-                const SizedBox(height: 14),
-                SegmentedButton<bool>(
-                  segments: const <ButtonSegment<bool>>[
-                    ButtonSegment<bool>(
-                      value: true,
-                      icon: AppHugeIcon(HugeIcons.strokeRoundedMagicWand02),
-                      label: Text('设计音色'),
-                    ),
-                    ButtonSegment<bool>(
-                      value: false,
-                      icon: AppHugeIcon(HugeIcons.strokeRoundedMic01),
-                      label: Text('克隆音色'),
-                    ),
-                  ],
-                  selected: <bool>{_designMode},
-                  onSelectionChanged: (values) =>
-                      setState(() => _designMode = values.first),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  key: const Key('voiceNameField'),
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: '音色名称',
-                    prefixIcon: AppPrefixIcon(HugeIcons.strokeRoundedBadge),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<String>(
-                  segments: const <ButtonSegment<String>>[
-                    ButtonSegment<String>(
-                      value: '不限定',
-                      icon: AppHugeIcon(HugeIcons.strokeRoundedSettings05),
-                      label: Text('不限定'),
-                    ),
-                    ButtonSegment<String>(
-                      value: '男声',
-                      icon: AppHugeIcon(HugeIcons.strokeRoundedMale02),
-                      label: Text('男声', key: Key('maleVoiceSegment')),
-                    ),
-                    ButtonSegment<String>(
-                      value: '女声',
-                      icon: AppHugeIcon(HugeIcons.strokeRoundedFemale02),
-                      label: Text('女声', key: Key('femaleVoiceSegment')),
-                    ),
-                  ],
-                  selected: <String>{_gender},
-                  onSelectionChanged: (values) =>
-                      setState(() => _gender = values.first),
-                ),
-                const SizedBox(height: 12),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeOutCubic,
-                  child: _designMode
-                      ? Column(
-                          key: const ValueKey<String>('designModeFields'),
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            _VoiceDesignGuidance(
-                              onTemplateSelected: _applyDesignTemplate,
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              key: const Key('stylePromptField'),
-                              controller: _styleController,
-                              minLines: 4,
-                              maxLines: 6,
-                              decoration: const InputDecoration(
-                                labelText: '音色描述',
-                                hintText: '写清年龄/性别、音色质感、语气情绪、语速节奏、角色人设或场景。',
-                                prefixIcon: AppPrefixIcon(
-                                  HugeIcons.strokeRoundedEdit02,
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : Column(
-                          key: const ValueKey<String>('cloneModeFields'),
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            const _RequirementBox(
-                              icon: HugeIcons.strokeRoundedFileAudio,
-                              title: '上传音频要求',
-                              text:
-                                  '建议 10-30 秒清晰单人声；安静环境录制；支持 mp3/wav；文件小于 5 MB；避免背景音乐、多人声和明显噪音。',
-                            ),
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 220),
-                              switchInCurve: Curves.easeOutCubic,
-                              child: _showReadPrompt
-                                  ? Padding(
-                                      padding: const EdgeInsets.only(top: 10),
-                                      child: _RequirementBox(
-                                        icon: HugeIcons.strokeRoundedVoice,
-                                        title: _recording
-                                            ? '正在录音，请跟读'
-                                            : '录音跟读文本',
-                                        text: _readAloudPrompt,
-                                        active: _recording,
-                                      ),
-                                    )
-                                  : const SizedBox.shrink(),
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: AppFlatActionButton(
-                                    onPressed: _pickReferenceAudio,
-                                    icon: HugeIcons.strokeRoundedFileUpload,
-                                    label: '上传音频',
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: AppFlatActionButton(
-                                    prominent: true,
-                                    onPressed: _toggleRecording,
-                                    icon: _recording
-                                        ? HugeIcons.strokeRoundedStop
-                                        : HugeIcons.strokeRoundedMic01,
-                                    label: _recording ? '停止录音' : '立即录音',
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            AppFlatActionButton(
-                              key: const Key('referencePathField'),
-                              onPressed: _pathController.text.trim().isEmpty
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<String>(
+            segments: const <ButtonSegment<String>>[
+              ButtonSegment<String>(
+                value: '不限定',
+                icon: AppHugeIcon(HugeIcons.strokeRoundedSettings05),
+                label: Text('不限定'),
+              ),
+              ButtonSegment<String>(
+                value: '男声',
+                icon: AppHugeIcon(HugeIcons.strokeRoundedMale02),
+                label: Text('男声', key: Key('maleVoiceSegment')),
+              ),
+              ButtonSegment<String>(
+                value: '女声',
+                icon: AppHugeIcon(HugeIcons.strokeRoundedFemale02),
+                label: Text('女声', key: Key('femaleVoiceSegment')),
+              ),
+            ],
+            selected: <String>{_gender},
+            onSelectionChanged: (values) =>
+                setState(() => _gender = values.first),
+          ),
+          const SizedBox(height: 12),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeOutCubic,
+            child: _designMode
+                ? Column(
+                    key: const ValueKey<String>('designModeFields'),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      _VoiceDesignGuidance(
+                        onTemplateSelected: _applyDesignTemplate,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        key: const Key('stylePromptField'),
+                        controller: _styleController,
+                        minLines: 4,
+                        maxLines: 6,
+                        decoration: const InputDecoration(
+                          labelText: '音色描述',
+                          hintText: '写清年龄/性别、音色质感、语气情绪、语速节奏、角色人设或场景。',
+                          prefixIcon: AppPrefixIcon(
+                            HugeIcons.strokeRoundedEdit02,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: AppFlatActionButton(
+                              prominent: true,
+                              onPressed: _generatingPreview
                                   ? null
-                                  : _toggleReferencePlayback,
-                              icon: _referencePlaying
+                                  : _generateDesignPreview,
+                              icon: _generatingPreview
+                                  ? HugeIcons.strokeRoundedLoading03
+                                  : HugeIcons.strokeRoundedMagicWand02,
+                              label: _generatingPreview ? '生成试听中...' : '生成试听',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: AppFlatActionButton(
+                              onPressed: _designPreviewPath == null
+                                  ? null
+                                  : _toggleDesignPreviewPlayback,
+                              icon: _designPreviewPlaying
                                   ? HugeIcons.strokeRoundedPause
                                   : HugeIcons.strokeRoundedPlay,
-                              label: _pathController.text.trim().isEmpty
-                                  ? '参考音频'
-                                  : '播放参考音频',
+                              label: '播放试听',
                             ),
-                            if (_validationMessage != null) ...<Widget>[
-                              const SizedBox(height: 8),
-                              Text(
-                                _validationMessage!,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: scheme.onSurfaceVariant),
-                              ),
-                            ],
-                          ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                : Column(
+                    key: const ValueKey<String>('cloneModeFields'),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      const _RequirementBox(
+                        icon: HugeIcons.strokeRoundedFileAudio,
+                        title: '上传音频要求',
+                        text:
+                            '建议 10-30 秒清晰单人声；安静环境录制；支持 mp3/wav；文件小于 5 MB；避免背景音乐、多人声和明显噪音。',
+                      ),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        switchInCurve: Curves.easeOutCubic,
+                        child: _showReadPrompt
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: _RequirementBox(
+                                  icon: HugeIcons.strokeRoundedVoice,
+                                  title: _recording ? '正在录音，请跟读' : '录音跟读文本',
+                                  text: _readAloudPrompt,
+                                  active: _recording,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: AppFlatActionButton(
+                              onPressed: _pickReferenceAudio,
+                              icon: HugeIcons.strokeRoundedFileUpload,
+                              label: '上传音频',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: AppFlatActionButton(
+                              prominent: true,
+                              onPressed: _toggleRecording,
+                              icon: _recording
+                                  ? HugeIcons.strokeRoundedStop
+                                  : HugeIcons.strokeRoundedMic01,
+                              label: _recording ? '停止录音' : '立即录音',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      AppFlatActionButton(
+                        key: const Key('referencePathField'),
+                        onPressed: _pathController.text.trim().isEmpty
+                            ? null
+                            : _toggleReferencePlayback,
+                        icon: _referencePlaying
+                            ? HugeIcons.strokeRoundedPause
+                            : HugeIcons.strokeRoundedPlay,
+                        label: _pathController.text.trim().isEmpty
+                            ? '参考音频'
+                            : '播放参考音频',
+                      ),
+                      if (_validationMessage != null) ...<Widget>[
+                        const SizedBox(height: 8),
+                        Text(
+                          _validationMessage!,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
-                ),
-                const SizedBox(height: 16),
-                if (_formError != null) ...<Widget>[
-                  Text(
-                    _formError!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
+                      ],
+                      const SizedBox(height: 10),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: AppFlatActionButton(
+                              onPressed: _generatingClonePreview
+                                  ? null
+                                  : _generateClonePreview,
+                              icon: _generatingClonePreview
+                                  ? HugeIcons.strokeRoundedLoading03
+                                  : HugeIcons.strokeRoundedMagicWand02,
+                              label: _generatingClonePreview
+                                  ? '生成试听中...'
+                                  : '生成试听',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: AppFlatActionButton(
+                              onPressed: _clonePreviewPath == null
+                                  ? null
+                                  : _toggleClonePreviewPlayback,
+                              icon: _clonePreviewPlaying
+                                  ? HugeIcons.strokeRoundedPause
+                                  : HugeIcons.strokeRoundedPlay,
+                              label: '播放试听',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                ],
-                FilledButton.icon(
-                  onPressed: _saving ? null : _save,
-                  icon: const AppHugeIcon(
-                    HugeIcons.strokeRoundedCheckmarkCircle02,
-                  ),
-                  label: Text(_saving ? '保存中...' : '生成并保存'),
-                ),
-              ],
+          ),
+          const SizedBox(height: 16),
+          if (_formError != null) ...<Widget>[
+            Text(
+              _formError!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            const SizedBox(height: 10),
+          ],
+          FilledButton.icon(
+            onPressed: _saving ? null : _save,
+            icon: const AppHugeIcon(HugeIcons.strokeRoundedCheckmarkCircle02),
+            label: Text(
+              _saving
+                  ? '保存中...'
+                  : _designMode && _designPreviewPath != null
+                  ? '保存音色'
+                  : '生成并保存',
             ),
           ),
-        ),
+        ],
       ),
     );
   }

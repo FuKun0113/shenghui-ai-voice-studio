@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../domain/generated_audio.dart';
@@ -17,6 +18,7 @@ class GeneratedAudioCapsule extends StatelessWidget {
     required this.onShare,
     required this.onDelete,
     required this.onRegenerate,
+    this.isRegenerating = false,
   });
 
   final GeneratedAudio audio;
@@ -28,6 +30,7 @@ class GeneratedAudioCapsule extends StatelessWidget {
   final VoidCallback onShare;
   final VoidCallback onDelete;
   final VoidCallback onRegenerate;
+  final bool isRegenerating;
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +85,7 @@ class GeneratedAudioCapsule extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              '${audio.voiceName} · ${formatAudioDuration(audio.durationMs)}',
+                              '${formatGeneratedAudioTime(audio.createdAt)} · ${audio.voiceName} · ${formatAudioDuration(audio.durationMs)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.labelSmall
@@ -94,15 +97,19 @@ class GeneratedAudioCapsule extends StatelessWidget {
                           ),
                         ],
                       ),
-                      if (showTextPreview) ...<Widget>[
+                      if (showTextPreview || isRegenerating) ...<Widget>[
                         const SizedBox(height: 8),
-                        MimoTaggedText(
-                          audio.text,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
+                        isRegenerating
+                            ? const _RegeneratingIndicator(
+                                key: Key('audioRegeneratingIndicator'),
+                              )
+                            : MimoTaggedText(
+                                audio.text,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: scheme.onSurfaceVariant),
+                              ),
                       ],
                     ],
                   ),
@@ -127,8 +134,11 @@ class GeneratedAudioCapsule extends StatelessWidget {
                         ),
                         _AudioCardAction(
                           tooltip: '重生成',
-                          icon: HugeIcons.strokeRoundedRefresh,
-                          onPressed: onRegenerate,
+                          icon: isRegenerating
+                              ? HugeIcons.strokeRoundedLoading03
+                              : HugeIcons.strokeRoundedRefresh,
+                          spinning: isRegenerating,
+                          onPressed: isRegenerating ? null : onRegenerate,
                         ),
                         _AudioCardAction(
                           tooltip: '删除',
@@ -202,7 +212,7 @@ class LargeGeneratedAudioPlayer extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      '${audio.voiceName} · ${formatAudioDuration(audio.durationMs)}',
+                      '${formatGeneratedAudioTime(audio.createdAt)} · ${audio.voiceName} · ${formatAudioDuration(audio.durationMs)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -257,21 +267,28 @@ class AudioActionButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.danger = false,
+    this.spinning = false,
   });
 
   final List<List<dynamic>> icon;
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool danger;
+  final bool spinning;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final color = danger ? scheme.error : scheme.primary;
+    final actionIcon = HugeIcon(icon: icon, size: 18, color: color);
     return Expanded(
       child: FilledButton.tonalIcon(
         onPressed: onPressed,
-        icon: HugeIcon(icon: icon, size: 18, color: color),
+        icon: spinning
+            ? actionIcon
+                  .animate(onPlay: (controller) => controller.repeat())
+                  .rotate(duration: 900.ms, curve: Curves.linear)
+            : actionIcon,
         label: FittedBox(child: Text(label)),
         style: FilledButton.styleFrom(
           foregroundColor: color,
@@ -312,12 +329,14 @@ class _AudioCardAction {
     required this.icon,
     required this.onPressed,
     this.danger = false,
+    this.spinning = false,
   });
 
   final String tooltip;
   final List<List<dynamic>> icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool danger;
+  final bool spinning;
 }
 
 class _MiniActionButton extends StatelessWidget {
@@ -329,6 +348,7 @@ class _MiniActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final color = action.danger ? scheme.error : scheme.primary;
+    final icon = HugeIcon(icon: action.icon, size: 18, color: color);
     return SizedBox.square(
       dimension: 36,
       child: IconButton(
@@ -339,8 +359,43 @@ class _MiniActionButton extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         onPressed: action.onPressed,
-        icon: HugeIcon(icon: action.icon, size: 18, color: color),
+        icon: action.spinning
+            ? icon
+                  .animate(onPlay: (controller) => controller.repeat())
+                  .rotate(duration: 900.ms, curve: Curves.linear)
+            : icon,
       ),
+    );
+  }
+}
+
+class _RegeneratingIndicator extends StatelessWidget {
+  const _RegeneratingIndicator({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        HugeIcon(
+              icon: HugeIcons.strokeRoundedRefresh,
+              size: 15,
+              color: scheme.primary,
+            )
+            .animate(onPlay: (controller) => controller.repeat())
+            .rotate(duration: 900.ms, curve: Curves.linear),
+        const SizedBox(width: 6),
+        Text(
+              '正在重生成',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: scheme.primary,
+                fontWeight: FontWeight.w900,
+              ),
+            )
+            .animate(onPlay: (controller) => controller.repeat(reverse: true))
+            .fade(begin: 0.55, end: 1, duration: 700.ms),
+      ],
     );
   }
 }
@@ -362,21 +417,46 @@ class _PlayToggleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final foreground = isPlaying ? scheme.primary : scheme.onSurfaceVariant;
-    return SizedBox.square(
-      dimension: size,
-      child: IconButton(
-        tooltip: isPlaying ? '暂停' : '播放',
-        onPressed: onPressed,
-        style: IconButton.styleFrom(
-          foregroundColor: foreground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    return AnimatedScale(
+      scale: isPlaying ? 1.08 : 1,
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: isPlaying
+              ? scheme.primaryContainer.withValues(alpha: 0.88)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isPlaying
+              ? <BoxShadow>[
+                  BoxShadow(
+                    color: scheme.primary.withValues(alpha: 0.16),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : null,
         ),
-        icon: HugeIcon(
-          icon: isPlaying
-              ? HugeIcons.strokeRoundedPause
-              : HugeIcons.strokeRoundedPlay,
-          size: iconSize,
-          color: foreground,
+        child: IconButton(
+          tooltip: isPlaying ? '暂停' : '播放',
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+            foregroundColor: foreground,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          icon: HugeIcon(
+            icon: isPlaying
+                ? HugeIcons.strokeRoundedPause
+                : HugeIcons.strokeRoundedPlay,
+            size: iconSize,
+            color: foreground,
+          ),
         ),
       ),
     );
@@ -390,4 +470,24 @@ String formatAudioDuration(int durationMs) {
   final seconds = totalSeconds % 60;
   if (minutes == 0) return '$seconds 秒';
   return '$minutes:${seconds.toString().padLeft(2, '0')}';
+}
+
+String formatGeneratedAudioTime(DateTime createdAt, {DateTime? now}) {
+  final localCreatedAt = createdAt.toLocal();
+  final localNow = (now ?? DateTime.now()).toLocal();
+  final createdDate = DateTime(
+    localCreatedAt.year,
+    localCreatedAt.month,
+    localCreatedAt.day,
+  );
+  final today = DateTime(localNow.year, localNow.month, localNow.day);
+  final time =
+      '${localCreatedAt.hour.toString().padLeft(2, '0')}:${localCreatedAt.minute.toString().padLeft(2, '0')}';
+  final dayDelta = today.difference(createdDate).inDays;
+  if (dayDelta == 0) return '今天 $time';
+  if (dayDelta == 1) return '昨天 $time';
+  if (localCreatedAt.year == localNow.year) {
+    return '${localCreatedAt.month}月${localCreatedAt.day}日 $time';
+  }
+  return '${localCreatedAt.year}年${localCreatedAt.month}月${localCreatedAt.day}日 $time';
 }

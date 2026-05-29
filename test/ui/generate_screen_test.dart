@@ -37,6 +37,11 @@ void main() {
     await tester.tap(find.text('生成语音'));
     await tester.pump();
     expect(find.text('生成中...'), findsOneWidget);
+    expect(
+      find.byKey(const Key('generationButtonActivityIcon')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('generationActivityStrip')), findsNothing);
 
     await tester.pumpAndSettle();
     final item = state.history.single;
@@ -69,7 +74,7 @@ void main() {
     await tester.tap(find.text('生成语音'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('请先填写 MiMo API Key'), findsOneWidget);
+    expect(find.textContaining('请先填写语音服务 API Key'), findsOneWidget);
     expect(openedSettings, isFalse);
 
     await tester.tap(find.text('去设置'));
@@ -140,6 +145,51 @@ void main() {
     expect(state.stylePrompt, '全屏输入后的表演指令');
   });
 
+  testWidgets('fullscreen draft editor can insert repeatable tags', (
+    tester,
+  ) async {
+    final state = AppState(mimoService: MockMimoService());
+    state.updateDraftText('欢迎使用 AI 语音工作台。');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: GenerateScreen(appState: state)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byTooltip('全屏编辑输入文本'));
+    await tester.tap(find.byTooltip('全屏编辑输入文本'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('插入标签'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('粤语'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('插入标签'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('轻笑'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('完成'));
+    await tester.pumpAndSettle();
+
+    expect(state.draftText, '(粤语)欢迎使用 AI 语音工作台。[轻笑]');
+  });
+
+  testWidgets('long draft warns about the 8K token context limit', (
+    tester,
+  ) async {
+    final state = AppState(mimoService: MockMimoService());
+    state.updateDraftText('长' * 6500);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: GenerateScreen(appState: state)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('8K token'), findsOneWidget);
+    expect(find.textContaining('建议分段生成'), findsOneWidget);
+  });
+
   testWidgets('tag insert sheet inserts repeatable style and audio tags', (
     tester,
   ) async {
@@ -185,7 +235,7 @@ void main() {
     await tester.tap(find.text('高级案例'));
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(AppBar, 'MiMo 标签与案例'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, '标签与高级案例'), findsOneWidget);
     expect(find.text('风格标签'), findsOneWidget);
     expect(find.text('音频标签'), findsOneWidget);
     expect(find.text('沧桑老前辈叙事'), findsOneWidget);

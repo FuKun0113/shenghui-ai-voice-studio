@@ -29,14 +29,14 @@ class LocalServiceConfigStore {
           ? ServiceMode.backendProxy
           : ServiceMode.directApiKey,
       backendUrl: backendUrl,
-      apiUrl: apiUrl,
+      apiUrl: ServiceConfig.normalizeBaseApiUrl(apiUrl),
       apiKey: apiKey,
     );
   }
 
   Future<void> save(ServiceConfig config) async {
     await _preferences.setString(_modeKey, config.mode.name);
-    await _preferences.setString(_apiUrlKey, config.apiUrl);
+    await _preferences.setString(_apiUrlKey, config.normalizedApiUrl);
     if (config.backendUrl != null) {
       await _preferences.setString(_backendUrlKey, config.backendUrl!);
     } else {

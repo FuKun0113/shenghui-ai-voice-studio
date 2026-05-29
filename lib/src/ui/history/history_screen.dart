@@ -32,6 +32,8 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
+  final Set<String> _regeneratingIds = <String>{};
+
   @override
   void initState() {
     super.initState();
@@ -89,11 +91,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _regenerate(GeneratedAudio item) async {
     final messenger = ScaffoldMessenger.of(context);
+    setState(() => _regeneratingIds.add(item.id));
     try {
       final audio = await widget.appState.regenerateAudio(item);
       if (!mounted) return;
+      setState(() => _regeneratingIds.remove(item.id));
       await widget.playbackService.playFile(audio.audioPath);
     } on Object catch (error) {
+      if (mounted) setState(() => _regeneratingIds.remove(item.id));
       messenger.showSnackBar(SnackBar(content: Text('重生成失败：$error')));
     }
   }
@@ -180,6 +185,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             onShare: () => _share(item),
             onDelete: () => _delete(item),
             onRegenerate: () => _regenerate(item),
+            isRegenerating: _regeneratingIds.contains(item.id),
           ),
         );
       },

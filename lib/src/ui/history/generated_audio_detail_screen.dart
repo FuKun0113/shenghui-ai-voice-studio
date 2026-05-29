@@ -46,6 +46,9 @@ class _GeneratedAudioDetailScreenState
   @override
   void dispose() {
     widget.playbackService.playbackState.removeListener(_syncPlayback);
+    if (widget.playbackService.playbackState.value.path == _audio.audioPath) {
+      unawaited(Future<void>.microtask(widget.playbackService.stop));
+    }
     super.dispose();
   }
 
@@ -212,9 +215,12 @@ class _GeneratedAudioDetailScreenState
                   ),
                   const SizedBox(width: 8),
                   AudioActionButton(
-                    icon: HugeIcons.strokeRoundedRefresh,
-                    label: '重生成',
-                    onPressed: _working ? () {} : _regenerate,
+                    icon: _working
+                        ? HugeIcons.strokeRoundedLoading03
+                        : HugeIcons.strokeRoundedRefresh,
+                    label: _working ? '正在重生成' : '重生成',
+                    onPressed: _working ? null : _regenerate,
+                    spinning: _working,
                   ),
                   const SizedBox(width: 8),
                   AudioActionButton(

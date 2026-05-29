@@ -85,7 +85,7 @@ class AppTheme {
           ),
           foregroundColor: scheme.onSurface,
           side: BorderSide.none,
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size.fromHeight(52),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
@@ -134,6 +134,47 @@ class AppTheme {
           color: scheme.onSurface,
           fontWeight: FontWeight.w700,
         ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surface,
+        elevation: 12,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        titleTextStyle: base.textTheme.titleLarge?.copyWith(
+          color: scheme.onSurface,
+          fontWeight: FontWeight.w900,
+        ),
+        contentTextStyle: base.textTheme.bodyMedium?.copyWith(
+          color: scheme.onSurfaceVariant,
+          height: 1.45,
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: scheme.surface,
+        modalBackgroundColor: scheme.surface,
+        elevation: 12,
+        modalElevation: 16,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: scheme.surface,
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        textStyle: base.textTheme.bodyMedium?.copyWith(
+          color: scheme.onSurface,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: scheme.surface,
+        contentTextStyle: base.textTheme.bodyMedium?.copyWith(
+          color: scheme.onSurface,
+          fontWeight: FontWeight.w700,
+        ),
+        actionTextColor: scheme.primary,
+        elevation: 10,
+        insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }

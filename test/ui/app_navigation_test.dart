@@ -11,7 +11,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('生成'), findsWidgets);
-    expect(find.text('输入文本'), findsOneWidget);
+    expect(find.byKey(const Key('draftTextField')), findsOneWidget);
 
     await tester.tap(find.text('音色库').last);
     await tester.pumpAndSettle();
@@ -23,7 +23,7 @@ void main() {
 
     await tester.tap(find.text('设置').last);
     await tester.pumpAndSettle();
-    expect(find.text('MiMo 服务'), findsOneWidget);
+    expect(find.text('语音服务'), findsOneWidget);
   });
 
   testWidgets('bottom navigation exposes a visible selected indicator', (

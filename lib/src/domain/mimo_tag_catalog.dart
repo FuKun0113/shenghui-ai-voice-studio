@@ -122,7 +122,7 @@ const List<MimoAdvancedExample> mimoAdvancedExamples = <MimoAdvancedExample>[
     text:
         '(调侃) 老张你当时不是说这条航线稳得很吗……\n(模仿自信，提高音量) “系统全绿，放心走。”\n(突然停顿) ……现在呢？\n(爆发，愤怒压不住) 现在整艘船都在报警！你管这叫“放心”？！\n(声音变轻) 不过……你看那外面，裂开的星云像在呼吸一样。\n(急促｜呼喊) 别断通讯！喂！再撑十秒！十秒！！\n(低声｜情绪塌陷般平静) ……算了。\n(轻笑｜带点释然) 也挺好，至少是一起看的。',
     notes: '标签控制写在 role:assistant 的正文里，适合需要细粒度情绪转场的长台词。',
-    voiceName: 'MiMo-默认',
+    voiceName: '默认音色',
     audioPath: 'assets/audio/examples/mimo-doc-audio-tags.wav',
     durationMs: 27200,
     sourceLabel: 'MiMo V2.5 TTS 发布文档 · 音频标签',

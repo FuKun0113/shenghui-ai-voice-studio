@@ -39,7 +39,7 @@ class AudioExportService implements AudioExportController {
       ShareParams(
         title: '分享语音',
         subject: fileName,
-        text: '来自 AI 语音工作台的生成语音：${audio.voiceName}',
+        text: '来自声绘的生成语音：${audio.voiceName}',
         files: <XFile>[
           XFile(
             audio.audioPath,

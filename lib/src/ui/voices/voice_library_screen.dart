@@ -61,13 +61,10 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
   }
 
   void _openCreationSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => VoiceCreationSheet(appState: widget.appState),
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => VoiceCreationScreen(appState: widget.appState),
+      ),
     );
   }
 

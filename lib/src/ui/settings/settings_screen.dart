@@ -4,8 +4,11 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../../domain/connection_test_result.dart';
 import '../../domain/service_config.dart';
+import '../../domain/text_optimization_config.dart';
 import '../../state/app_state.dart';
 import '../widgets/app_panel.dart';
+
+const double _settingsInlineControlHeight = 58;
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, required this.appState});
@@ -42,32 +45,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: <Widget>[
             _MenuTile(
               icon: HugeIcons.strokeRoundedCloudServer,
-              title: 'MiMo 服务',
-              subtitle: 'API URL、API Key、连接测试和代理模式。',
+              title: '语音服务',
+              subtitle: 'API URL、API Key 和连接测试。',
               onTap: () => _openPage(
                 context,
-                title: 'MiMo 服务',
+                title: '语音服务',
                 icon: HugeIcons.strokeRoundedCloudServer,
-                child: _MiMoServicePage(appState: widget.appState),
+                child: _VoiceServicePage(appState: widget.appState),
               ),
             ),
             const Divider(height: 1),
             _MenuTile(
-              icon: HugeIcons.strokeRoundedInformationCircle,
-              title: '关于本 App',
-              subtitle: '版本、定位和产品说明。',
-              onTap: () => _openInfoPage(
+              icon: HugeIcons.strokeRoundedMagicWand02,
+              title: '文本优化服务',
+              subtitle: 'OpenAI 兼容接口，用于生成指令和优化文本。',
+              onTap: () => _openPage(
                 context,
-                title: '关于 AI 语音工作台',
-                icon: HugeIcons.strokeRoundedInformationCircle,
-                body: const <Widget>[
-                  _DetailParagraph(
-                    'AI 语音工作台是一个面向 Android 的 MiMo 语音生成原型，重点提供音色管理、语音生成、历史保存和本地体验。',
-                  ),
-                  _DetailBullet('产品当前聚焦本地体验，不包含账号体系。'),
-                  _DetailBullet('MiMo API、广告和通知仅保留轻量预留位。'),
-                  _DetailBullet('发布版可补充版本号、更新说明和第三方组件说明。'),
-                ],
+                title: '文本优化服务',
+                icon: HugeIcons.strokeRoundedMagicWand02,
+                child: _TextOptimizationServicePage(appState: widget.appState),
               ),
             ),
             const Divider(height: 1),
@@ -80,12 +76,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: '版权与授权声明',
                 icon: HugeIcons.strokeRoundedCopyright,
                 body: const <Widget>[
-                  _DetailParagraph(
-                    '本应用仅提供语音合成和音色管理工具，不负责验证用户上传或克隆的声音是否拥有合法授权。',
+                  _InfoSectionCard(
+                    icon: HugeIcons.strokeRoundedShieldUser,
+                    title: '使用边界',
+                    text:
+                        '本应用是语音合成、音色设计和音色管理工具。应用不会自动判断用户上传、录制或克隆的声音是否拥有合法授权，相关授权核验需要由用户自行完成。',
                   ),
-                  _DetailBullet('禁止未经授权使用他人声音进行克隆或生成。'),
-                  _DetailBullet('所有使用行为由用户自行承担责任。'),
-                  _DetailBullet('建议在首次使用克隆功能前再次确认授权声明。'),
+                  _InfoSectionCard(
+                    icon: HugeIcons.strokeRoundedMicOff01,
+                    title: '禁止行为',
+                    bullets: <String>[
+                      '禁止未经授权使用他人声音进行克隆、仿冒、传播或商业化使用。',
+                      '禁止生成误导他人身份、侵犯肖像权/声音权益/名誉权的内容。',
+                      '禁止将生成音频用于诈骗、骚扰、冒充、虚假宣传或其他违法用途。',
+                    ],
+                  ),
+                  _InfoSectionCard(
+                    icon: HugeIcons.strokeRoundedAgreement01,
+                    title: '用户责任',
+                    text:
+                        '用户应确保自己拥有素材、声音和文本内容的合法使用权。因上传、克隆、生成、下载、分享音频产生的法律责任，由用户自行承担。',
+                  ),
                 ],
               ),
             ),
@@ -99,47 +110,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: '隐私与权限',
                 icon: HugeIcons.strokeRoundedShield01,
                 body: const <Widget>[
-                  _DetailParagraph('应用需要录音、文件选择和本地存储权限，以便采集参考音频、读取文档并保存生成结果。'),
-                  _DetailBullet('音频和文档默认保存在本机。'),
-                  _DetailBullet('当前实现不主动上传用户本地历史到云端。'),
-                  _DetailBullet('后续若接入云功能，应补充单独的隐私说明。'),
+                  _InfoSectionCard(
+                    icon: HugeIcons.strokeRoundedMic01,
+                    title: '录音权限',
+                    text:
+                        '录音权限仅用于用户主动录制参考音频或创建克隆音色。应用不会在后台自动录音，也不会在用户未触发录音时采集麦克风内容。',
+                  ),
+                  _InfoSectionCard(
+                    icon: HugeIcons.strokeRoundedFolder01,
+                    title: '文件与存储',
+                    bullets: <String>[
+                      '文件选择用于读取 Word、PDF、TXT 文档中的文本内容。',
+                      '本地存储用于保存生成音频、历史记录和用户创建的音色。',
+                      '下载和分享动作由用户主动触发，应用不会自动分享本地文件。',
+                    ],
+                  ),
+                  _InfoSectionCard(
+                    icon: HugeIcons.strokeRoundedCloudOff,
+                    title: '数据传输',
+                    text:
+                        '当前版本不提供账号体系，也不主动同步用户本地历史到云端。调用语音服务或文本优化服务时，请求所需文本、指令或参考音频会发送到用户配置的服务接口。',
+                  ),
+                  _InfoSectionCard(
+                    icon: HugeIcons.strokeRoundedKey02,
+                    title: 'API Key 本地保存',
+                    text:
+                        '用户填写的语音服务和文本优化服务 API Key 仅保存在本机本 App 的本地配置中，不会上传到声绘后台。请妥善保管自己的密钥，并确认第三方接口的数据处理规则。',
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-      AppPanel(
-        padding: EdgeInsets.zero,
-        child: _MenuTile(
-          icon: HugeIcons.strokeRoundedNotification01,
-          title: '弹窗通知预留',
-          subtitle: '只保留应用内弹窗提醒入口。',
-          onTap: () => _openInfoPage(
-            context,
-            title: '弹窗通知预留',
-            icon: HugeIcons.strokeRoundedNotification01,
-            body: const <Widget>[
-              _DetailParagraph('当前版本不接真实推送，只保留轻量弹窗提醒接口。'),
-              _DetailBullet('后续可用于生成完成弹窗或系统公告。'),
-              _DetailBullet('远程推送能力暂不接入。'),
-            ],
-          ),
-        ),
-      ),
-      AppPanel(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: const <Widget>[
-            SectionHeader(
-              title: '常驻广告位预留',
-              subtitle: '当前只占位，不加载真实广告或广告 SDK。',
-              trailing: IconBadge(icon: HugeIcons.strokeRoundedMegaphone01),
+            const Divider(height: 1),
+            _MenuTile(
+              icon: HugeIcons.strokeRoundedInformationCircle,
+              title: '关于本 App',
+              subtitle: '版本、定位和产品说明。',
+              onTap: () => _openInfoPage(
+                context,
+                title: '关于声绘',
+                icon: HugeIcons.strokeRoundedInformationCircle,
+                body: const <Widget>[
+                  _AboutBrandCard(),
+                  _InfoSectionCard(
+                    icon: HugeIcons.strokeRoundedRocket01,
+                    title: '产品定位',
+                    text:
+                        '声绘是一款面向 Android 的语音生成工具，重点提供音色选择、音色设计、音色克隆、文本转语音、历史管理和本地播放体验。',
+                  ),
+                  _InfoSectionCard(
+                    icon: HugeIcons.strokeRoundedSettings05,
+                    title: '当前版本',
+                    bullets: <String>[
+                      '当前版本聚焦本地工具体验，不包含账号体系和云端资产管理。',
+                      '广告、通知和推广入口仅保留接口与占位，默认不加载真实广告 SDK。',
+                      '语音服务和文本优化服务由用户在设置中自行配置。',
+                    ],
+                  ),
+                  _InfoSectionCard(
+                    icon: HugeIcons.strokeRoundedPackage,
+                    title: '发布说明预留',
+                    text: '正式发布时可在这里补充版本号、更新日志、第三方组件声明、开源许可和客服/反馈入口。',
+                  ),
+                ],
+              ),
             ),
-            SizedBox(height: 12),
-            _ReservedAdSlot(title: '设置页常驻位', subtitle: '后续可接 Banner 或原生广告'),
-            SizedBox(height: 10),
-            _ReservedAdSlot(title: '启动页广告位', subtitle: '仅预留，不改变当前启动流程'),
           ],
         ),
       ),
@@ -249,30 +283,27 @@ class _SettingsInfoPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        AppPanel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: body,
-          ),
-        ),
+        for (final entry in body.indexed) ...<Widget>[
+          if (entry.$1 != 0) const SizedBox(height: 12),
+          entry.$2,
+        ],
       ],
     );
   }
 }
 
-class _MiMoServicePage extends StatefulWidget {
-  const _MiMoServicePage({required this.appState});
+class _VoiceServicePage extends StatefulWidget {
+  const _VoiceServicePage({required this.appState});
 
   final AppState appState;
 
   @override
-  State<_MiMoServicePage> createState() => _MiMoServicePageState();
+  State<_VoiceServicePage> createState() => _VoiceServicePageState();
 }
 
-class _MiMoServicePageState extends State<_MiMoServicePage> {
+class _VoiceServicePageState extends State<_VoiceServicePage> {
   late final TextEditingController _apiUrlController;
   late final TextEditingController _apiKeyController;
-  ServiceMode _mode = ServiceMode.directApiKey;
   bool _showApiKey = false;
   bool _testing = false;
   ConnectionTestResult? _testResult;
@@ -281,8 +312,7 @@ class _MiMoServicePageState extends State<_MiMoServicePage> {
   void initState() {
     super.initState();
     final config = widget.appState.serviceConfig;
-    _mode = config.mode;
-    _apiUrlController = TextEditingController(text: config.apiUrl);
+    _apiUrlController = TextEditingController(text: config.normalizedApiUrl);
     _apiKeyController = TextEditingController(text: config.apiKey);
   }
 
@@ -294,19 +324,19 @@ class _MiMoServicePageState extends State<_MiMoServicePage> {
   }
 
   void _save() {
+    final normalizedApiUrl = ServiceConfig.normalizeBaseApiUrl(
+      _apiUrlController.text,
+    );
+    _apiUrlController.text = normalizedApiUrl;
     widget.appState.updateServiceConfig(
-      ServiceConfig(
-        mode: _mode,
-        backendUrl: _mode == ServiceMode.backendProxy
-            ? _apiUrlController.text.trim()
-            : null,
-        apiUrl: _apiUrlController.text.trim(),
+      ServiceConfig.directApi(
+        apiUrl: normalizedApiUrl,
         apiKey: _apiKeyController.text.trim(),
       ),
     );
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('MiMo API 配置已保存')));
+    ).showSnackBar(const SnackBar(content: Text('语音服务配置已保存')));
   }
 
   Future<void> _testConnection() async {
@@ -315,12 +345,8 @@ class _MiMoServicePageState extends State<_MiMoServicePage> {
       _testResult = null;
     });
     final result = await widget.appState.mimoService.testConnection(
-      config: ServiceConfig(
-        mode: _mode,
-        backendUrl: _mode == ServiceMode.backendProxy
-            ? _apiUrlController.text.trim()
-            : null,
-        apiUrl: _apiUrlController.text.trim(),
+      config: ServiceConfig.directApi(
+        apiUrl: ServiceConfig.normalizeBaseApiUrl(_apiUrlController.text),
         apiKey: _apiKeyController.text.trim(),
       ),
     );
@@ -336,28 +362,34 @@ class _MiMoServicePageState extends State<_MiMoServicePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        const AppPanel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              SectionHeader(
+                title: '语音服务',
+                subtitle: '目前默认适配小米 MiMo 的语音服务，也支持兼容同一接口形态的第三方服务。',
+              ),
+              SizedBox(height: 10),
+              _LabeledInfoBlock(
+                label: '可用服务',
+                description:
+                    '你可以使用小米 MiMo 官方 API 接口和 API Key，也可以填写第三方兼容服务；第三方服务必须同时具备 mimo-v2.5-tts、mimo-v2.5-tts-voiceclone、mimo-v2.5-tts-voicedesign 这三类能力。',
+              ),
+              SizedBox(height: 10),
+              _LabeledInfoBlock(
+                label: '填写方式',
+                description:
+                    'API URL 建议只填写到 /v1，例如 https://api.xiaomimimo.com/v1；应用会自动拼接 /chat/completions。API Key 填写服务商提供的密钥，保存在本机。',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
         AppPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              SegmentedButton<ServiceMode>(
-                segments: const <ButtonSegment<ServiceMode>>[
-                  ButtonSegment<ServiceMode>(
-                    value: ServiceMode.directApiKey,
-                    icon: AppHugeIcon(HugeIcons.strokeRoundedKey01),
-                    label: Text('直连'),
-                  ),
-                  ButtonSegment<ServiceMode>(
-                    value: ServiceMode.backendProxy,
-                    icon: AppHugeIcon(HugeIcons.strokeRoundedCloudServer),
-                    label: Text('代理'),
-                  ),
-                ],
-                selected: <ServiceMode>{_mode},
-                onSelectionChanged: (values) =>
-                    setState(() => _mode = values.first),
-              ),
-              const SizedBox(height: 14),
               TextField(
                 controller: _apiUrlController,
                 decoration: const InputDecoration(
@@ -387,22 +419,27 @@ class _MiMoServicePageState extends State<_MiMoServicePage> {
               Row(
                 children: <Widget>[
                   Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _save,
-                      icon: const AppHugeIcon(HugeIcons.strokeRoundedSave),
-                      label: const Text('保存配置'),
+                    child: _FixedHeightControl(
+                      key: const Key('voiceServiceSaveButton'),
+                      child: AppFlatActionButton(
+                        icon: HugeIcons.strokeRoundedSave,
+                        label: '保存配置',
+                        onPressed: _save,
+                        prominent: true,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _testing ? null : _testConnection,
-                      icon: AppHugeIcon(
-                        _testing
+                    child: _FixedHeightControl(
+                      key: const Key('voiceServiceTestButton'),
+                      child: AppFlatActionButton(
+                        icon: _testing
                             ? HugeIcons.strokeRoundedLoading03
                             : HugeIcons.strokeRoundedCloudSavingDone01,
+                        label: _testing ? '测试中...' : '测试连接',
+                        onPressed: _testing ? null : _testConnection,
                       ),
-                      label: Text(_testing ? '测试中...' : '测试连接'),
                     ),
                   ),
                 ],
@@ -414,24 +451,410 @@ class _MiMoServicePageState extends State<_MiMoServicePage> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        const AppPanel(
+      ],
+    );
+  }
+}
+
+class _TextOptimizationServicePage extends StatefulWidget {
+  const _TextOptimizationServicePage({required this.appState});
+
+  final AppState appState;
+
+  @override
+  State<_TextOptimizationServicePage> createState() =>
+      _TextOptimizationServicePageState();
+}
+
+class _TextOptimizationServicePageState
+    extends State<_TextOptimizationServicePage> {
+  late final TextEditingController _apiUrlController;
+  late final TextEditingController _apiKeyController;
+  late final TextEditingController _modelController;
+  bool _showApiKey = false;
+  bool _loadingModels = false;
+  List<String> _models = const <String>[];
+  String? _modelMessage;
+  bool _modelMessageIsError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final config = widget.appState.textOptimizationConfig;
+    _apiUrlController = TextEditingController(text: config.normalizedApiUrl);
+    _apiKeyController = TextEditingController(text: config.apiKey);
+    _modelController = TextEditingController(text: config.model);
+  }
+
+  @override
+  void dispose() {
+    _apiUrlController.dispose();
+    _apiKeyController.dispose();
+    _modelController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final normalizedApiUrl = TextOptimizationConfig.normalizeBaseApiUrl(
+      _apiUrlController.text,
+    );
+    _apiUrlController.text = normalizedApiUrl;
+    widget.appState.updateTextOptimizationConfig(
+      TextOptimizationConfig(
+        apiUrl: normalizedApiUrl,
+        apiKey: _apiKeyController.text.trim(),
+        model: _modelController.text.trim(),
+      ),
+    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('文本优化服务配置已保存')));
+  }
+
+  TextOptimizationConfig _formConfig() {
+    return TextOptimizationConfig(
+      apiUrl: TextOptimizationConfig.normalizeBaseApiUrl(
+        _apiUrlController.text,
+      ),
+      apiKey: _apiKeyController.text.trim(),
+      model: _modelController.text.trim(),
+    );
+  }
+
+  Future<void> _fetchModels() async {
+    setState(() {
+      _loadingModels = true;
+      _modelMessage = null;
+      _modelMessageIsError = false;
+    });
+    try {
+      final models = await widget.appState.fetchTextOptimizationModels(
+        _formConfig(),
+      );
+      if (!mounted) return;
+      final current = _modelController.text.trim();
+      setState(() {
+        _models = models;
+        if (current.isEmpty || !models.contains(current)) {
+          _modelController.text = models.first;
+        }
+        _loadingModels = false;
+        _modelMessage = '已获取 ${models.length} 个模型，请选择要用于文本优化的模型。';
+      });
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadingModels = false;
+        _modelMessage = '模型列表获取失败：$error';
+        _modelMessageIsError = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentModel = _modelController.text.trim();
+    final selectorModels = _models.isNotEmpty
+        ? _models
+        : currentModel.isNotEmpty
+        ? <String>[currentModel]
+        : const <String>[];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        AppPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              _LabeledInfoBlock(
-                label: '后端代理',
-                description: '正式版本推荐，API Key 保存在服务端。',
+              const SectionHeader(
+                title: 'OpenAI 兼容接口',
+                subtitle: '用于生成表演指令、润色正文、自动加入风格标签和音频标签。',
               ),
-              SizedBox(height: 10),
-              _LabeledInfoBlock(
-                label: '原型直连 API Key',
-                description: '仅用于本机 Demo。',
+              const SizedBox(height: 10),
+              const _LabeledInfoBlock(
+                label: '用途',
+                description:
+                    '这个模型只负责文本优化：根据正文生成表演指令、把已有文本润色成更适合配音的表达，或自动插入风格标签和音频标签；它不会直接生成语音。',
+              ),
+              const SizedBox(height: 10),
+              const _LabeledInfoBlock(
+                label: '填写方式',
+                description:
+                    'API URL 填写 OpenAI 兼容服务的基础地址，通常到 /v1 为止，例如 https://api.openai.com/v1。API Key 填写该服务提供的密钥，然后点击获取模型并选择一个文本模型。',
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _apiUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'API URL',
+                  hintText: TextOptimizationConfig.defaultApiUrl,
+                  prefixIcon: AppPrefixIcon(HugeIcons.strokeRoundedLink01),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _apiKeyController,
+                obscureText: !_showApiKey,
+                enableSuggestions: false,
+                autocorrect: false,
+                decoration: InputDecoration(
+                  labelText: 'API Key',
+                  hintText: 'sk-...',
+                  prefixIcon: const AppPrefixIcon(HugeIcons.strokeRoundedKey02),
+                  suffixIcon: IconButton(
+                    tooltip: _showApiKey ? '隐藏 API Key' : '显示 API Key',
+                    onPressed: () => setState(() => _showApiKey = !_showApiKey),
+                    icon: const AppHugeIcon(HugeIcons.strokeRoundedEye),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: _FixedHeightControl(
+                      key: selectorModels.isEmpty
+                          ? const Key('textOptimizationModelFieldFrame')
+                          : const Key('textOptimizationModelSelector'),
+                      child: selectorModels.isEmpty
+                          ? TextField(
+                              key: const Key('textOptimizationModelField'),
+                              controller: _modelController,
+                              textAlignVertical: TextAlignVertical.center,
+                              decoration: const InputDecoration(
+                                labelText: '模型',
+                                hintText: '先获取模型列表，或手动填写兼容模型名',
+                                prefixIcon: AppPrefixIcon(
+                                  HugeIcons.strokeRoundedAiBrain01,
+                                ),
+                              ),
+                            )
+                          : _ModelSelectorField(
+                              models: selectorModels,
+                              selectedModel:
+                                  selectorModels.contains(currentModel)
+                                  ? currentModel
+                                  : selectorModels.first,
+                              onSelected: (value) {
+                                setState(() => _modelController.text = value);
+                              },
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    key: const Key('fetchTextOptimizationModelsButton'),
+                    width: 126,
+                    child: _FixedHeightControl(
+                      child: AppFlatActionButton(
+                        icon: _loadingModels
+                            ? HugeIcons.strokeRoundedLoading03
+                            : HugeIcons.strokeRoundedCloudDownload,
+                        label: _loadingModels ? '获取中' : '获取模型',
+                        onPressed: _loadingModels ? null : _fetchModels,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (_modelMessage != null) ...<Widget>[
+                const SizedBox(height: 10),
+                _InlineStatusBox(
+                  message: _modelMessage!,
+                  isError: _modelMessageIsError,
+                ),
+              ],
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: _save,
+                icon: const AppHugeIcon(HugeIcons.strokeRoundedSave),
+                label: const Text('保存配置'),
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FixedHeightControl extends StatelessWidget {
+  const _FixedHeightControl({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(height: _settingsInlineControlHeight, child: child);
+  }
+}
+
+class _ModelSelectorField extends StatelessWidget {
+  const _ModelSelectorField({
+    required this.models,
+    required this.selectedModel,
+    required this.onSelected,
+  });
+
+  final List<String> models;
+  final String selectedModel;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => _openModelSheet(context),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              children: <Widget>[
+                const AppPrefixIcon(HugeIcons.strokeRoundedAiBrain01),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        '模型',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        selectedModel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                AppHugeIcon(
+                  HugeIcons.strokeRoundedArrowDown01,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openModelSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final scheme = Theme.of(context).colorScheme;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          child: Material(
+            key: const Key('modelSelectorSheet'),
+            color: scheme.surface,
+            elevation: 12,
+            shadowColor: scheme.shadow.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(8),
+            clipBehavior: Clip.antiAlias,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.68,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: scheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                    child: Row(
+                      children: <Widget>[
+                        const AppHugeIcon(HugeIcons.strokeRoundedAiBrain01),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '选择模型',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                      itemCount: models.length,
+                      separatorBuilder: (_, _) => Divider(
+                        height: 1,
+                        color: scheme.outlineVariant.withValues(alpha: 0.46),
+                      ),
+                      itemBuilder: (context, index) {
+                        final model = models[index];
+                        final selected = model == selectedModel;
+                        return ListTile(
+                          title: Text(
+                            model,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: selected
+                                  ? FontWeight.w900
+                                  : FontWeight.w700,
+                            ),
+                          ),
+                          leading: IconBadge(
+                            icon: selected
+                                ? HugeIcons.strokeRoundedCheckmarkCircle02
+                                : HugeIcons.strokeRoundedAiBrain01,
+                            selected: selected,
+                          ),
+                          trailing: selected
+                              ? AppHugeIcon(
+                                  HugeIcons.strokeRoundedCheckmarkCircle02,
+                                  color: scheme.primary,
+                                )
+                              : null,
+                          onTap: () {
+                            onSelected(model);
+                            Navigator.of(context).pop();
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -476,6 +899,52 @@ class _ConnectionResultBox extends StatelessWidget {
   }
 }
 
+class _InlineStatusBox extends StatelessWidget {
+  const _InlineStatusBox({required this.message, required this.isError});
+
+  final String message;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = isError ? scheme.error : scheme.primary;
+    final background = isError
+        ? scheme.errorContainer.withValues(alpha: 0.56)
+        : scheme.primaryContainer.withValues(alpha: 0.58);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: <Widget>[
+            AppHugeIcon(
+              isError
+                  ? HugeIcons.strokeRoundedAlertCircle
+                  : HugeIcons.strokeRoundedCheckmarkCircle02,
+              color: color,
+              size: 19,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: isError ? scheme.onErrorContainer : scheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MenuTile extends StatelessWidget {
   const _MenuTile({
     required this.icon,
@@ -505,45 +974,121 @@ class _MenuTile extends StatelessWidget {
   }
 }
 
-class _DetailParagraph extends StatelessWidget {
-  const _DetailParagraph(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
-    );
-  }
-}
-
-class _DetailBullet extends StatelessWidget {
-  const _DetailBullet(this.text);
-
-  final String text;
+class _AboutBrandCard extends StatelessWidget {
+  const _AboutBrandCard();
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return AppPanel(
+      child: Column(
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(top: 7),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: scheme.primary,
-                shape: BoxShape.circle,
-              ),
-              child: const SizedBox.square(dimension: 7),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Image.asset(
+              'assets/brand/shenghui_icon_1024.png',
+              key: const Key('aboutAppIcon'),
+              width: 88,
+              height: 88,
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text)),
+          const SizedBox(height: 14),
+          Text(
+            '声绘',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: scheme.onSurface,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '把文字绘成有表情的声音',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoSectionCard extends StatelessWidget {
+  const _InfoSectionCard({
+    required this.icon,
+    required this.title,
+    this.text,
+    this.bullets = const <String>[],
+  });
+
+  final List<List<dynamic>> icon;
+  final String title;
+  final String? text;
+  final List<String> bullets;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AppPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              AppHugeIcon(icon, color: scheme.primary, size: 24),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+          if (text != null) ...<Widget>[
+            const SizedBox(height: 10),
+            Text(
+              text!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
+          ],
+          if (bullets.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 10),
+            for (final bullet in bullets.indexed) ...<Widget>[
+              if (bullet.$1 != 0) const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 7),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: scheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const SizedBox.square(dimension: 6),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      bullet.$2,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ],
       ),
     );
@@ -599,67 +1144,6 @@ class _LabeledInfoBlock extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReservedAdSlot extends StatelessWidget {
-  const _ReservedAdSlot({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.55),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: <Widget>[
-            AppHugeIcon(
-              HugeIcons.strokeRoundedMegaphone01,
-              color: scheme.primary,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              '预留',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: scheme.primary,
-                fontWeight: FontWeight.w700,
               ),
             ),
           ],

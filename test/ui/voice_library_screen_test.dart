@@ -12,7 +12,7 @@ void main() {
     );
 
     expect(find.text('9 个官方音色 · 0 个自定义音色'), findsOneWidget);
-    expect(find.text('MiMo-默认'), findsOneWidget);
+    expect(find.text('默认音色'), findsWidgets);
     expect(find.text('冰糖'), findsWidgets);
     expect(find.text('官方预置'), findsWidgets);
     expect(find.text('自定义'), findsOneWidget);
@@ -30,6 +30,8 @@ void main() {
 
     await tester.tap(find.text('创建音色'));
     await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(AppBar, '创建音色'), findsOneWidget);
 
     await tester.tap(find.text('设计音色'));
     await tester.pumpAndSettle();

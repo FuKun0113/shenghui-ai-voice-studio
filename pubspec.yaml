@@ -1,5 +1,5 @@
 name: voice_clone_app
-description: "A new Flutter project."
+description: "声绘：AI 语音生成与音色创作工具。"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -68,6 +68,7 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
+    - assets/brand/
     - assets/audio/previews/
     - assets/audio/examples/
 

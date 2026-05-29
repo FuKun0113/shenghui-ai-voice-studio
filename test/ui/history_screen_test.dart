@@ -112,6 +112,36 @@ void main() {
     expect(find.text('我的历史语音'), findsOneWidget);
   });
 
+  testWidgets('detail page stops its audio when leaving playback screen', (
+    tester,
+  ) async {
+    final state = AppState(mimoService: MockMimoService());
+    state.updateDraftText('退出详情停止播放');
+    final generatedFuture = state.generateCurrentVoice();
+    await tester.pump(const Duration(milliseconds: 200));
+    await generatedFuture;
+    final playback = FakePlaybackController();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: HistoryScreen(appState: state, playbackService: playback),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('退出详情停止播放').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('播放'));
+    await tester.pump();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(playback.stopCount, 1);
+    expect(playback.playbackState.value.path, isNull);
+  });
+
   testWidgets('history item can regenerate audio from the capsule action', (
     tester,
   ) async {
@@ -131,16 +161,20 @@ void main() {
     );
 
     await tester.tap(find.byTooltip('重生成'));
+    await tester.pump();
+    expect(find.text('正在重生成'), findsOneWidget);
+    expect(find.byKey(const Key('audioRegeneratingIndicator')), findsOneWidget);
     await tester.pumpAndSettle();
 
-    expect(state.history, hasLength(2));
-    expect(state.history.first.text, '复用文本');
-    expect(playback.playedPaths, <String>[state.history.first.audioPath]);
+    expect(state.history, hasLength(1));
+    expect(state.history.single.text, '复用文本');
+    expect(playback.playedPaths, <String>[state.history.single.audioPath]);
   });
 }
 
 class FakePlaybackController implements AudioPlaybackController {
   final List<String> playedPaths = <String>[];
+  int stopCount = 0;
   @override
   final ValueNotifier<AudioPlaybackSnapshot> playbackState =
       ValueNotifier<AudioPlaybackSnapshot>(const AudioPlaybackSnapshot());
@@ -158,6 +192,7 @@ class FakePlaybackController implements AudioPlaybackController {
 
   @override
   Future<void> stop() async {
+    stopCount += 1;
     playbackState.value = const AudioPlaybackSnapshot();
   }
 

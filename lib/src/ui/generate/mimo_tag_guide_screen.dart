@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -23,7 +25,7 @@ class MimoTagGuideScreen extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: SectionHeader(
-                title: 'MiMo 标签与案例',
+                title: '标签与高级案例',
                 subtitle: '风格标签写在文本开头，音频标签插入到具体句子位置。',
               ),
             ),
@@ -35,7 +37,7 @@ class MimoTagGuideScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('MiMo 标签与案例')),
+      appBar: AppBar(title: const Text('标签与高级案例')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -68,7 +70,7 @@ class _TagLegendPanel extends StatelessWidget {
         children: const <Widget>[
           SectionHeader(
             title: '标签规则',
-            subtitle: '这些标签会进入待合成文本，因此会随文本一起发给 MiMo。',
+            subtitle: '这些标签会进入待合成文本，因此会随文本一起发给语音服务。',
           ),
           SizedBox(height: 12),
           _LegendRow(
@@ -290,6 +292,9 @@ class _MimoExampleDetailScreenState extends State<MimoExampleDetailScreen> {
   @override
   void dispose() {
     widget.playbackService.playbackState.removeListener(_syncPlayback);
+    if (widget.playbackService.playbackState.value.path == _audio.audioPath) {
+      unawaited(Future<void>.microtask(widget.playbackService.stop));
+    }
     super.dispose();
   }
 

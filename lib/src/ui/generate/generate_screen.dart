@@ -10,6 +10,7 @@ import '../../domain/voice.dart';
 import '../../services/document_text_extractor.dart';
 import '../../services/audio_export_service.dart';
 import '../../services/audio_playback_service.dart';
+import '../../services/text_optimization_service.dart';
 import '../../services/text_segmenter.dart';
 import '../../state/app_state.dart';
 import '../history/generated_audio_detail_screen.dart';
@@ -38,6 +39,7 @@ class GenerateScreen extends StatefulWidget {
 
 class _GenerateScreenState extends State<GenerateScreen> {
   static final List<String> _audioTags = flattenMimoTags(mimoAudioTagGroups);
+  static const int _recommendedMaxChars = 6000;
 
   final _MimoTaggedTextEditingController _textController =
       _MimoTaggedTextEditingController();
@@ -47,6 +49,7 @@ class _GenerateScreenState extends State<GenerateScreen> {
   String? _error;
   String? _importedFileName;
   bool _needsSettings = false;
+  final Set<String> _regeneratingAudioIds = <String>{};
 
   @override
   void initState() {
@@ -79,7 +82,13 @@ class _GenerateScreenState extends State<GenerateScreen> {
       if (imported == null) return;
       _textController.text = imported.text;
       widget.appState.updateDraftText(imported.text);
-      setState(() => _importedFileName = imported.name);
+      setState(() {
+        _importedFileName = imported.name;
+        if (imported.text.trim().length > _recommendedMaxChars) {
+          _error =
+              '导入文档约 ${imported.text.trim().length} 字，语音模型上下文约 8K token，建议删减到 $_recommendedMaxChars 字以内，或使用分段生成。';
+        }
+      });
     } on Object catch (error) {
       setState(() => _error = '文档读取失败：$error');
     }
@@ -98,65 +107,23 @@ class _GenerateScreenState extends State<GenerateScreen> {
   }
 
   void _insertStyleTag(String tag) {
-    final text = _textController.text;
-    final selection = _textController.selection;
-    final originalOffset = selection.isValid
-        ? selection.baseOffset.clamp(0, text.length).toInt()
-        : text.length;
-    final leadingStyle = RegExp(r'^\s*[\(（]([^\)）]*)[\)）]').firstMatch(text);
-    if (leadingStyle != null) {
-      final tags = leadingStyle
-          .group(1)!
-          .split(RegExp(r'[，,\s|｜]+'))
-          .where((item) => item.trim().isNotEmpty)
-          .toList();
-      tags.add(tag);
-      final token = '(${tags.join(' ')})';
-      final delta = token.length - (leadingStyle.end - leadingStyle.start);
-      final nextOffset = originalOffset >= leadingStyle.end
-          ? originalOffset + delta
-          : token.length;
-      _updateDraftText(
-        text.replaceRange(leadingStyle.start, leadingStyle.end, token),
-        selectionOffset: nextOffset,
-      );
-      return;
-    }
-    final token = '($tag)';
-    _updateDraftText(
-      '$token$text',
-      selectionOffset: originalOffset + token.length,
-    );
+    _insertStyleTagIntoController(_textController, tag);
+    widget.appState.updateDraftText(_textController.text);
+    setState(() {});
   }
 
   void _insertAudioTag(String tag) {
-    final token = '[$tag]';
-    final text = _textController.text;
-    final selection = _textController.selection;
-    final start = selection.isValid
-        ? selection.start.clamp(0, text.length).toInt()
-        : text.length;
-    final end = selection.isValid
-        ? selection.end.clamp(0, text.length).toInt()
-        : start;
-    final nextText = text.replaceRange(start, end, token);
-    _updateDraftText(nextText, selectionOffset: start + token.length);
+    _insertAudioTagIntoController(_textController, tag);
+    widget.appState.updateDraftText(_textController.text);
+    setState(() {});
   }
 
   Set<String> _selectedStyleTags(String text) {
-    final leadingStyle = RegExp(r'^\s*[\(（]([^\)）]*)[\)）]').firstMatch(text);
-    if (leadingStyle == null) return const <String>{};
-    return leadingStyle
-        .group(1)!
-        .split(RegExp(r'[，,\s|｜]+'))
-        .where((item) => item.trim().isNotEmpty)
-        .toSet();
+    return _selectedStyleTagsInText(text);
   }
 
   Set<String> _selectedAudioTags(String text) {
-    return _audioTags
-        .where((tag) => text.contains('[$tag]') || text.contains('【$tag】'))
-        .toSet();
+    return _selectedAudioTagsInText(text);
   }
 
   Future<void> _openTagInsertSheet() async {
@@ -182,6 +149,10 @@ class _GenerateScreenState extends State<GenerateScreen> {
       title: '全屏编辑输入文本',
       initialText: _textController.text,
       hintText: '输入要生成语音的文本，长文也可以在这里集中编辑。',
+      enableTags: true,
+      appState: widget.appState,
+      stylePrompt: _styleController.text,
+      enableTextAiTools: true,
     );
     if (value == null || !mounted) return;
     _updateDraftText(value);
@@ -252,7 +223,7 @@ class _GenerateScreenState extends State<GenerateScreen> {
   void _showSettingsGuidance() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('请先填写 MiMo API Key'),
+        content: const Text('请先填写语音服务 API Key'),
         action: SnackBarAction(
           label: '去设置',
           onPressed: () => widget.onOpenSettings?.call(),
@@ -316,15 +287,25 @@ class _GenerateScreenState extends State<GenerateScreen> {
     setState(() {
       _error = null;
       _needsSettings = false;
+      _regeneratingAudioIds.add(audio.id);
     });
     try {
       final regenerated = await widget.appState.regenerateAudio(audio);
-      setState(() => _lastAudio = regenerated);
+      setState(() {
+        _regeneratingAudioIds.remove(audio.id);
+        _lastAudio = regenerated;
+      });
       await widget.playbackService.playFile(regenerated.audioPath);
     } on StateError catch (error) {
-      setState(() => _error = error.message);
+      setState(() {
+        _regeneratingAudioIds.remove(audio.id);
+        _error = error.message;
+      });
     } on Object catch (error) {
-      setState(() => _error = error.toString());
+      setState(() {
+        _regeneratingAudioIds.remove(audio.id);
+        _error = error.toString();
+      });
     }
   }
 
@@ -376,6 +357,7 @@ class _GenerateScreenState extends State<GenerateScreen> {
     final segments = const TextSegmenter().segment(_textController.text);
     final charCount = _textController.text.trim().length;
     final estimatedSeconds = (charCount / 4).ceil();
+    final tooLong = charCount > _recommendedMaxChars;
 
     return Column(
       children: <Widget>[
@@ -445,6 +427,8 @@ class _GenerateScreenState extends State<GenerateScreen> {
                               const SizedBox(height: 12),
                               _InstructField(
                                 controller: _styleController,
+                                appState: widget.appState,
+                                sourceText: _textController.text,
                                 onChanged: widget.appState.updateStylePrompt,
                               ),
                               const SizedBox(height: 12),
@@ -477,13 +461,12 @@ class _GenerateScreenState extends State<GenerateScreen> {
                                     minLines: 6,
                                     maxLines: 10,
                                     decoration: const InputDecoration(
-                                      labelText: '输入文本',
-                                      hintText: '例如：欢迎使用 AI 语音工作台。',
+                                      hintText: '例如：欢迎使用声绘。',
                                       contentPadding: EdgeInsets.fromLTRB(
                                         16,
-                                        18,
-                                        56,
-                                        58,
+                                        12,
+                                        16,
+                                        44,
                                       ),
                                     ),
                                     onChanged: (value) {
@@ -553,6 +536,22 @@ class _GenerateScreenState extends State<GenerateScreen> {
                                   ],
                                 ),
                               ),
+                              if (tooLong) ...<Widget>[
+                                const SizedBox(height: 10),
+                                AppPanel(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Text(
+                                    '当前约 $charCount 字。语音生成模型上下文约 8K token，建议控制在 $_recommendedMaxChars 字以内；长文建议分段生成，或先删除精简后再生成。',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.error,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -601,6 +600,9 @@ class _GenerateScreenState extends State<GenerateScreen> {
                                 onDelete: () => _deleteAudio(_lastAudio!),
                                 onRegenerate: () =>
                                     _regenerateAudio(_lastAudio!),
+                                isRegenerating: _regeneratingAudioIds.contains(
+                                  _lastAudio!.id,
+                                ),
                               )
                               .animate()
                               .fadeIn(duration: 260.ms)
@@ -619,19 +621,24 @@ class _GenerateScreenState extends State<GenerateScreen> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-          child: AnimatedScale(
-            scale: widget.appState.isGenerating ? 0.98 : 1,
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOutCubic,
-            child: FilledButton.icon(
-              onPressed: widget.appState.isGenerating ? null : _generate,
-              icon: AppHugeIcon(
-                widget.appState.isGenerating
-                    ? HugeIcons.strokeRoundedAudioWave01
-                    : HugeIcons.strokeRoundedMagicWand02,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              AnimatedScale(
+                scale: widget.appState.isGenerating ? 0.98 : 1,
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                child: FilledButton.icon(
+                  onPressed: widget.appState.isGenerating ? null : _generate,
+                  icon: widget.appState.isGenerating
+                      ? const _GenerationButtonActivityIcon(
+                          key: Key('generationButtonActivityIcon'),
+                        )
+                      : const AppHugeIcon(HugeIcons.strokeRoundedMagicWand02),
+                  label: Text(widget.appState.isGenerating ? '生成中...' : '生成语音'),
+                ),
               ),
-              label: Text(widget.appState.isGenerating ? '生成中...' : '生成语音'),
-            ),
+            ],
           ),
         ),
       ],
@@ -639,7 +646,59 @@ class _GenerateScreenState extends State<GenerateScreen> {
   }
 }
 
+class _GenerationButtonActivityIcon extends StatelessWidget {
+  const _GenerationButtonActivityIcon({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 24,
+      height: 22,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          for (var i = 0; i < 4; i++) ...<Widget>[
+            if (i != 0) const SizedBox(width: 3),
+            _AnimatedGenerationBar(delay: i * 90),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AnimatedGenerationBar extends StatelessWidget {
+  const _AnimatedGenerationBar({required this.delay});
+
+  final int delay;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+          width: 3,
+          height: 16,
+          decoration: BoxDecoration(
+            color: IconTheme.of(context).color ?? scheme.onPrimary,
+            borderRadius: BorderRadius.circular(999),
+          ),
+        )
+        .animate(onPlay: (controller) => controller.repeat(reverse: true))
+        .scaleY(
+          begin: 0.45,
+          end: 1.25,
+          duration: 520.ms,
+          delay: delay.ms,
+          curve: Curves.easeInOutCubic,
+        )
+        .fade(begin: 0.45, end: 1);
+  }
+}
+
 class _MimoTaggedTextEditingController extends TextEditingController {
+  _MimoTaggedTextEditingController({super.text});
+
   static final RegExp _tagPattern = RegExp(
     r'[\(（][^\n\)）]{1,48}[\)）]|\[[^\n\]]{1,48}\]|【[^\n】]{1,48}】',
   );
@@ -688,6 +747,12 @@ Future<String?> _openFullscreenTextEditor(
   required String title,
   required String initialText,
   required String hintText,
+  bool enableTags = false,
+  AppState? appState,
+  String sourceText = '',
+  String stylePrompt = '',
+  bool enableTextAiTools = false,
+  bool enableInstructAiTool = false,
 }) {
   return Navigator.of(context).push<String>(
     MaterialPageRoute<String>(
@@ -696,6 +761,12 @@ Future<String?> _openFullscreenTextEditor(
         title: title,
         initialText: initialText,
         hintText: hintText,
+        enableTags: enableTags,
+        appState: appState,
+        sourceText: sourceText,
+        stylePrompt: stylePrompt,
+        enableTextAiTools: enableTextAiTools,
+        enableInstructAiTool: enableInstructAiTool,
       ),
     ),
   );
@@ -706,11 +777,23 @@ class _FullscreenTextEditorPage extends StatefulWidget {
     required this.title,
     required this.initialText,
     required this.hintText,
+    required this.enableTags,
+    this.appState,
+    this.sourceText = '',
+    this.stylePrompt = '',
+    this.enableTextAiTools = false,
+    this.enableInstructAiTool = false,
   });
 
   final String title;
   final String initialText;
   final String hintText;
+  final bool enableTags;
+  final AppState? appState;
+  final String sourceText;
+  final String stylePrompt;
+  final bool enableTextAiTools;
+  final bool enableInstructAiTool;
 
   @override
   State<_FullscreenTextEditorPage> createState() =>
@@ -718,14 +801,76 @@ class _FullscreenTextEditorPage extends StatefulWidget {
 }
 
 class _FullscreenTextEditorPageState extends State<_FullscreenTextEditorPage> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.initialText,
-  );
+  late final _MimoTaggedTextEditingController _controller =
+      _MimoTaggedTextEditingController(text: widget.initialText);
+  TextOptimizationTask? _activeTask;
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _openTagInsertSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _MimoTagInsertSheet(
+        styleGroups: mimoStyleTagGroups,
+        audioGroups: mimoAudioTagGroups,
+        selectedStyleTags: _selectedStyleTagsInText(_controller.text),
+        selectedAudioTags: _selectedAudioTagsInText(_controller.text),
+        onStyleTagSelected: (tag) {
+          _insertStyleTagIntoController(_controller, tag);
+          setState(() {});
+        },
+        onAudioTagSelected: (tag) {
+          _insertAudioTagIntoController(_controller, tag);
+          setState(() {});
+        },
+      ),
+    );
+  }
+
+  Future<void> _runAiTool(TextOptimizationTask task) async {
+    final appState = widget.appState;
+    if (appState == null || _activeTask != null) return;
+    final inputText = task == TextOptimizationTask.writeInstruct
+        ? widget.sourceText
+        : _controller.text;
+    if (inputText.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先填写正文文本')));
+      return;
+    }
+    setState(() => _activeTask = task);
+    try {
+      final result = await appState.optimizeText(
+        task: task,
+        inputText: inputText,
+        stylePrompt: task == TextOptimizationTask.writeInstruct
+            ? _controller.text
+            : widget.stylePrompt,
+      );
+      if (!mounted) return;
+      _setControllerText(_controller, result, selectionOffset: result.length);
+      setState(() => _activeTask = null);
+    } on StateError catch (error) {
+      if (!mounted) return;
+      setState(() => _activeTask = null);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _activeTask = null);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('AI 处理失败：$error')));
+    }
   }
 
   @override
@@ -734,6 +879,12 @@ class _FullscreenTextEditorPageState extends State<_FullscreenTextEditorPage> {
       appBar: AppBar(
         title: Text(widget.title),
         actions: <Widget>[
+          if (widget.enableTags)
+            TextButton.icon(
+              onPressed: _openTagInsertSheet,
+              icon: const AppHugeIcon(HugeIcons.strokeRoundedTags, size: 18),
+              label: const Text('插入标签'),
+            ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(_controller.text),
             child: const Text('完成'),
@@ -742,21 +893,201 @@ class _FullscreenTextEditorPageState extends State<_FullscreenTextEditorPage> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: TextField(
-            key: const Key('fullscreenTextEditorField'),
-            controller: _controller,
-            autofocus: true,
-            expands: true,
-            minLines: null,
-            maxLines: null,
-            textAlignVertical: TextAlignVertical.top,
-            decoration: InputDecoration(hintText: widget.hintText),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Column(
+            children: <Widget>[
+              if (widget.enableTextAiTools || widget.enableInstructAiTool) ...[
+                _FullscreenAiTools(
+                  activeTask: _activeTask,
+                  enableTextAiTools: widget.enableTextAiTools,
+                  enableInstructAiTool: widget.enableInstructAiTool,
+                  onRun: _runAiTool,
+                ),
+                const SizedBox(height: 12),
+              ],
+              Expanded(
+                child: TextField(
+                  key: const Key('fullscreenTextEditorField'),
+                  controller: _controller,
+                  autofocus: true,
+                  expands: true,
+                  minLines: null,
+                  maxLines: null,
+                  textAlignVertical: TextAlignVertical.top,
+                  decoration: InputDecoration(
+                    hintText: widget.hintText,
+                    contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
+}
+
+class _FullscreenAiTools extends StatelessWidget {
+  const _FullscreenAiTools({
+    required this.activeTask,
+    required this.enableTextAiTools,
+    required this.enableInstructAiTool,
+    required this.onRun,
+  });
+
+  final TextOptimizationTask? activeTask;
+  final bool enableTextAiTools;
+  final bool enableInstructAiTool;
+  final ValueChanged<TextOptimizationTask> onRun;
+
+  @override
+  Widget build(BuildContext context) {
+    final busy = activeTask != null;
+    return AppPanel(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (enableInstructAiTool)
+            AppFlatActionButton(
+              onPressed: busy
+                  ? null
+                  : () => onRun(TextOptimizationTask.writeInstruct),
+              icon: activeTask == TextOptimizationTask.writeInstruct
+                  ? HugeIcons.strokeRoundedLoading03
+                  : HugeIcons.strokeRoundedMagicWand02,
+              label: activeTask == TextOptimizationTask.writeInstruct
+                  ? '生成指令中...'
+                  : '根据正文生成指令',
+              prominent: true,
+            ),
+          if (enableInstructAiTool && enableTextAiTools)
+            const SizedBox(height: 10),
+          if (enableTextAiTools)
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: AppFlatActionButton(
+                    onPressed: busy
+                        ? null
+                        : () => onRun(TextOptimizationTask.polishText),
+                    icon: activeTask == TextOptimizationTask.polishText
+                        ? HugeIcons.strokeRoundedLoading03
+                        : HugeIcons.strokeRoundedEdit02,
+                    label: activeTask == TextOptimizationTask.polishText
+                        ? '优化中...'
+                        : '优化文本',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: AppFlatActionButton(
+                    onPressed: busy
+                        ? null
+                        : () => onRun(TextOptimizationTask.enrichTags),
+                    icon: activeTask == TextOptimizationTask.enrichTags
+                        ? HugeIcons.strokeRoundedLoading03
+                        : HugeIcons.strokeRoundedTags,
+                    label: activeTask == TextOptimizationTask.enrichTags
+                        ? '加标签中...'
+                        : 'AI 加标签',
+                    prominent: true,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+void _insertStyleTagIntoController(
+  TextEditingController controller,
+  String tag,
+) {
+  final text = controller.text;
+  final selection = controller.selection;
+  final originalOffset = selection.isValid
+      ? selection.baseOffset.clamp(0, text.length).toInt()
+      : text.length;
+  final leadingStyle = RegExp(r'^\s*[\(（]([^\)）]*)[\)）]').firstMatch(text);
+  if (leadingStyle != null) {
+    final tags = leadingStyle
+        .group(1)!
+        .split(RegExp(r'[，,\s|｜]+'))
+        .where((item) => item.trim().isNotEmpty)
+        .toList();
+    tags.add(tag);
+    final token = '(${tags.join(' ')})';
+    final delta = token.length - (leadingStyle.end - leadingStyle.start);
+    final nextOffset = originalOffset >= leadingStyle.end
+        ? originalOffset + delta
+        : token.length;
+    _setControllerText(
+      controller,
+      text.replaceRange(leadingStyle.start, leadingStyle.end, token),
+      selectionOffset: nextOffset,
+    );
+    return;
+  }
+  final token = '($tag)';
+  _setControllerText(
+    controller,
+    '$token$text',
+    selectionOffset: originalOffset + token.length,
+  );
+}
+
+void _insertAudioTagIntoController(
+  TextEditingController controller,
+  String tag,
+) {
+  final token = '[$tag]';
+  final text = controller.text;
+  final selection = controller.selection;
+  final start = selection.isValid
+      ? selection.start.clamp(0, text.length).toInt()
+      : text.length;
+  final end = selection.isValid
+      ? selection.end.clamp(0, text.length).toInt()
+      : start;
+  _setControllerText(
+    controller,
+    text.replaceRange(start, end, token),
+    selectionOffset: start + token.length,
+  );
+}
+
+void _setControllerText(
+  TextEditingController controller,
+  String value, {
+  int? selectionOffset,
+}) {
+  final offset = (selectionOffset ?? value.length)
+      .clamp(0, value.length)
+      .toInt();
+  controller.value = TextEditingValue(
+    text: value,
+    selection: TextSelection.collapsed(offset: offset),
+  );
+}
+
+Set<String> _selectedStyleTagsInText(String text) {
+  final leadingStyle = RegExp(r'^\s*[\(（]([^\)）]*)[\)）]').firstMatch(text);
+  if (leadingStyle == null) return const <String>{};
+  return leadingStyle
+      .group(1)!
+      .split(RegExp(r'[，,\s|｜]+'))
+      .where((item) => item.trim().isNotEmpty)
+      .toSet();
+}
+
+Set<String> _selectedAudioTagsInText(String text) {
+  return _GenerateScreenState._audioTags
+      .where((tag) => text.contains('[$tag]') || text.contains('【$tag】'))
+      .toSet();
 }
 
 class _FullscreenEditButton extends StatelessWidget {
@@ -788,9 +1119,16 @@ class _FullscreenEditButton extends StatelessWidget {
 }
 
 class _InstructField extends StatefulWidget {
-  const _InstructField({required this.controller, required this.onChanged});
+  const _InstructField({
+    required this.controller,
+    required this.appState,
+    required this.sourceText,
+    required this.onChanged,
+  });
 
   final TextEditingController controller;
+  final AppState appState;
+  final String sourceText;
   final ValueChanged<String> onChanged;
 
   @override
@@ -844,6 +1182,9 @@ class _InstructFieldState extends State<_InstructField> {
       title: '全屏编辑表演指令',
       initialText: widget.controller.text,
       hintText: '例如：整体自然亲切，像熟人当面提醒，语气不要太夸张。',
+      appState: widget.appState,
+      sourceText: widget.sourceText,
+      enableInstructAiTool: true,
     );
     if (value == null || !mounted) return;
     widget.controller.value = TextEditingValue(
@@ -858,9 +1199,7 @@ class _InstructFieldState extends State<_InstructField> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final value = widget.controller.text.trim();
-    final preview = value.isEmpty
-        ? '可选。这里会作为 MiMo 的 role:user Instruct 发送。'
-        : value;
+    final preview = value.isEmpty ? '可选。这里会作为 role:user Instruct 发送。' : value;
     return AnimatedSize(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
@@ -873,12 +1212,6 @@ class _InstructFieldState extends State<_InstructField> {
                 children: <Widget>[
                   Row(
                     children: <Widget>[
-                      AppHugeIcon(
-                        HugeIcons.strokeRoundedMagicWand02,
-                        size: 20,
-                        color: scheme.primary,
-                      ),
-                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           '表演指令 / Instruct',
@@ -903,10 +1236,7 @@ class _InstructFieldState extends State<_InstructField> {
                         maxLines: 4,
                         decoration: const InputDecoration(
                           hintText: '例如：整体自然亲切，像熟人当面提醒，语气不要太夸张。',
-                          prefixIcon: AppPrefixIcon(
-                            HugeIcons.strokeRoundedMagicWand02,
-                          ),
-                          contentPadding: EdgeInsets.fromLTRB(16, 18, 56, 58),
+                          contentPadding: EdgeInsets.fromLTRB(14, 12, 14, 44),
                         ),
                         onChanged: widget.onChanged,
                       ),
@@ -929,12 +1259,6 @@ class _InstructFieldState extends State<_InstructField> {
                   onTap: _openEditor,
                   child: Row(
                     children: <Widget>[
-                      AppHugeIcon(
-                        HugeIcons.strokeRoundedMagicWand02,
-                        size: 20,
-                        color: scheme.primary,
-                      ),
-                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1463,18 +1787,12 @@ class _VoiceSelectorField extends StatelessWidget {
         final scheme = Theme.of(context).colorScheme;
         return Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: scheme.shadow.withValues(alpha: 0.16),
-                  blurRadius: 28,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
+          child: Material(
+            color: scheme.surface,
+            elevation: 12,
+            shadowColor: scheme.shadow.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(8),
+            clipBehavior: Clip.antiAlias,
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.sizeOf(context).height * 0.68,

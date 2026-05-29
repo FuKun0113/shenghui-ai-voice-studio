@@ -64,7 +64,7 @@ class LocalVoiceStore {
     return <Voice>[
       Voice.builtin(
         id: 'mimo-default',
-        name: 'MiMo-默认',
+        name: '默认音色',
         providerVoiceId: 'mimo_default',
         previewAudioPath: 'assets/audio/previews/mimo-default.wav',
         language: '自动',

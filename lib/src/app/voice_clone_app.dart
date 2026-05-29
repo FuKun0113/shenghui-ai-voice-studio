@@ -12,7 +12,7 @@ class VoiceCloneApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AI 语音工作台',
+      title: '声绘',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       home: AppShell(appState: appState),

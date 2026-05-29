@@ -102,23 +102,23 @@ class MimoResponseParser {
   static String extractAudioBase64(Map<String, Object?> response) {
     final choices = response['choices'];
     if (choices is! List || choices.isEmpty) {
-      throw StateError('MiMo 响应中没有音频结果');
+      throw StateError('语音服务响应中没有音频结果');
     }
     final first = choices.first;
     if (first is! Map) {
-      throw StateError('MiMo 响应格式不正确');
+      throw StateError('语音服务响应格式不正确');
     }
     final message = first['message'];
     if (message is! Map) {
-      throw StateError('MiMo 响应中没有 message');
+      throw StateError('语音服务响应中没有 message');
     }
     final audio = message['audio'];
     if (audio is! Map) {
-      throw StateError('MiMo 响应中没有 audio');
+      throw StateError('语音服务响应中没有 audio');
     }
     final data = audio['data'];
     if (data is! String || data.isEmpty) {
-      throw StateError('MiMo 响应中没有音频数据');
+      throw StateError('语音服务响应中没有音频数据');
     }
     return data;
   }
@@ -186,7 +186,7 @@ class MimoApiService implements MimoService {
     if (!config.hasApiKey) {
       return const ConnectionTestResult(
         status: ConnectionTestStatus.missingApiKey,
-        message: '请先填写 MiMo API Key',
+        message: '请先填写语音服务 API Key',
       );
     }
     final uri = Uri.tryParse(config.resolvedApiUrl);
@@ -200,7 +200,7 @@ class MimoApiService implements MimoService {
       final request = GenerationRequest(
         text: '连接测试',
         voiceId: 'mimo-default',
-        voiceName: 'MiMo-默认',
+        voiceName: '默认音色',
         route: GenerationRoute.builtinTts,
         speed: 1.0,
         emotion: '自然',
@@ -213,7 +213,7 @@ class MimoApiService implements MimoService {
       );
       return const ConnectionTestResult(
         status: ConnectionTestStatus.success,
-        message: '连接成功，MiMo API 可用',
+        message: '连接成功，语音服务可用',
       );
     } on FormatException catch (error) {
       return ConnectionTestResult(
@@ -289,7 +289,7 @@ class MimoApiService implements MimoService {
     required Map<String, Object?> body,
   }) async {
     if (!config.hasApiKey) {
-      throw StateError('请先在设置里填写 MiMo API Key');
+      throw StateError('请先在设置里填写语音服务 API Key');
     }
     final response = await _client.post(
       Uri.parse(config.resolvedApiUrl),
@@ -300,11 +300,11 @@ class MimoApiService implements MimoService {
       body: jsonEncode(body),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError('MiMo API 调用失败：${response.statusCode} ${response.body}');
+      throw StateError('语音服务调用失败：${response.statusCode} ${response.body}');
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, Object?>) {
-      throw StateError('MiMo API 返回格式不正确');
+      throw StateError('语音服务返回格式不正确');
     }
     return base64Decode(MimoResponseParser.extractAudioBase64(decoded));
   }
@@ -317,7 +317,7 @@ class MimoApiService implements MimoService {
     final bytes = await file.readAsBytes();
     final encoded = base64Encode(bytes);
     if (encoded.length > 10 * 1024 * 1024) {
-      throw StateError('参考音频超过 MiMo 10 MB Base64 限制');
+      throw StateError('参考音频超过 10 MB Base64 限制');
     }
     return 'data:${_mimeTypeFor(path)};base64,$encoded';
   }
@@ -327,7 +327,7 @@ class MimoApiService implements MimoService {
     return switch (extension) {
       '.mp3' => 'audio/mpeg',
       '.wav' => 'audio/wav',
-      _ => throw StateError('MiMo 声音克隆仅支持 mp3 或 wav 参考音频'),
+      _ => throw StateError('声音克隆仅支持 mp3 或 wav 参考音频'),
     };
   }
 

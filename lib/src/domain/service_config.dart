@@ -17,8 +17,7 @@ class ServiceConfig {
     : mode = ServiceMode.directApiKey,
       backendUrl = null;
 
-  static const String defaultApiUrl =
-      'https://api.xiaomimimo.com/v1/chat/completions';
+  static const String defaultApiUrl = 'https://api.xiaomimimo.com/v1';
 
   final ServiceMode mode;
   final String? backendUrl;
@@ -27,15 +26,20 @@ class ServiceConfig {
 
   bool get hasApiKey => apiKey.trim().isNotEmpty;
 
-  String get resolvedApiUrl {
-    final value = apiUrl.trim();
-    if (value.isEmpty) return defaultApiUrl;
-    final normalized = value.endsWith('/')
-        ? value.substring(0, value.length - 1)
-        : value;
-    if (normalized.endsWith('/chat/completions')) return normalized;
-    if (normalized.endsWith('/v1')) return '$normalized/chat/completions';
-    return normalized;
+  static String normalizeBaseApiUrl(String value) {
+    final fallback = value.trim().isEmpty ? defaultApiUrl : value.trim();
+    final withoutTrailingSlash = fallback.endsWith('/')
+        ? fallback.substring(0, fallback.length - 1)
+        : fallback;
+    return withoutTrailingSlash.replaceFirst(RegExp(r'/chat/completions$'), '');
+  }
+
+  String get normalizedApiUrl => normalizeBaseApiUrl(apiUrl);
+
+  String get resolvedApiUrl => '$normalizedApiUrl/chat/completions';
+
+  ServiceConfig normalized() {
+    return copyWith(apiUrl: normalizedApiUrl);
   }
 
   ServiceConfig copyWith({
