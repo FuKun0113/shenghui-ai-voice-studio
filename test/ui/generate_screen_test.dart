@@ -28,7 +28,9 @@ void main() {
     expect(find.byType(DropdownButtonFormField<String>), findsNothing);
     expect(find.text('上传文档'), findsOneWidget);
     expect(find.text('插入标签'), findsOneWidget);
-    expect(find.text('表演指令 / Instruct'), findsOneWidget);
+    expect(find.text('表演指令'), findsOneWidget);
+    expect(find.text('表演指令 / Instruct'), findsNothing);
+    expect(find.textContaining('role:user'), findsNothing);
     expect(find.text('温柔'), findsNothing);
     expect(find.text('粤语'), findsNothing);
     expect(find.text('四川话'), findsNothing);
@@ -126,9 +128,9 @@ void main() {
 
     expect(state.draftText, '全屏输入后的正文');
 
-    await tester.ensureVisible(find.text('表演指令 / Instruct'));
+    await tester.ensureVisible(find.text('表演指令'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('表演指令 / Instruct'));
+    await tester.tap(find.text('表演指令'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('全屏编辑表演指令'));
     await tester.pumpAndSettle();
@@ -239,11 +241,17 @@ void main() {
     expect(find.text('风格标签'), findsOneWidget);
     expect(find.text('音频标签'), findsOneWidget);
     expect(find.text('沧桑老前辈叙事'), findsOneWidget);
+    expect(find.textContaining('低沉沙哑、娓娓道来'), findsOneWidget);
+    expect(find.textContaining('MiMo V2.5'), findsNothing);
+    expect(find.textContaining('Case1'), findsNothing);
     expect(find.text('基础情绪'), findsNothing);
 
     await tester.tap(find.text('沧桑老前辈叙事'));
     await tester.pumpAndSettle();
     expect(find.text('案例详情'), findsOneWidget);
+    expect(find.textContaining('1970年'), findsNothing);
+    expect(find.textContaining('MiMo V2.5'), findsNothing);
+    expect(find.textContaining('Case1'), findsNothing);
     expect(find.text('删除'), findsNothing);
     expect(find.text('重生成'), findsNothing);
     expect(find.text('套用文本'), findsOneWidget);

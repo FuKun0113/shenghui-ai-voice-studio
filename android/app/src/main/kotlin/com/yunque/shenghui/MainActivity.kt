@@ -1,4 +1,4 @@
-package com.yunque.voice_clone_app
+package com.yunque.shenghui
 
 import io.flutter.embedding.android.FlutterActivity
 

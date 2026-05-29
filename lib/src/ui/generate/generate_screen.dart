@@ -369,29 +369,19 @@ class _GenerateScreenState extends State<GenerateScreen> {
               children:
                   <Widget>[
                         AppPanel(
+                          key: const Key('voiceSelectorPanel'),
                           emphasized: true,
+                          padding: const EdgeInsets.all(12),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: <Widget>[
-                              Row(
-                                children: <Widget>[
-                                  const IconBadge(
-                                    icon: HugeIcons.strokeRoundedVoice,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: SectionHeader(
-                                      title: '选择音色',
-                                      subtitle:
-                                          selectedVoice?.tags
-                                              .take(3)
-                                              .join(' · ') ??
-                                          '请选择一个用于生成的音色',
-                                    ),
-                                  ),
-                                ],
+                              SectionHeader(
+                                title: '选择音色',
+                                subtitle:
+                                    selectedVoice?.tags.take(3).join(' · ') ??
+                                    '请选择一个用于生成的音色',
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 8),
                               _VoiceSelectorField(
                                 voices: widget.appState.voices,
                                 selectedVoiceId: selectedVoice?.id,
@@ -1199,7 +1189,9 @@ class _InstructFieldState extends State<_InstructField> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final value = widget.controller.text.trim();
-    final preview = value.isEmpty ? '可选。这里会作为 role:user Instruct 发送。' : value;
+    final preview = value.isEmpty
+        ? '可选，用来描述语气、情绪、角色和表达方式，会和正文一起发送给语音服务。'
+        : value;
     return AnimatedSize(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
@@ -1214,7 +1206,7 @@ class _InstructFieldState extends State<_InstructField> {
                     children: <Widget>[
                       Expanded(
                         child: Text(
-                          '表演指令 / Instruct',
+                          '表演指令',
                           style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w900),
                         ),
@@ -1264,7 +1256,7 @@ class _InstructFieldState extends State<_InstructField> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Text(
-                              '表演指令 / Instruct',
+                              '表演指令',
                               style: Theme.of(context).textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.w900),
                             ),
@@ -1737,13 +1729,14 @@ class _VoiceSelectorField extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: <Widget>[
-                const AppHugeIcon(HugeIcons.strokeRoundedVoiceId),
-                const SizedBox(width: 12),
+                const AppHugeIcon(HugeIcons.strokeRoundedVoiceId, size: 20),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
@@ -1753,13 +1746,14 @@ class _VoiceSelectorField extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         selectedVoice?.name ?? '选择音色',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ],
                   ),
@@ -1767,6 +1761,7 @@ class _VoiceSelectorField extends StatelessWidget {
                 const SizedBox(width: 8),
                 AppHugeIcon(
                   HugeIcons.strokeRoundedArrowDown01,
+                  size: 20,
                   color: scheme.onSurfaceVariant,
                 ),
               ],

@@ -26,4 +26,27 @@ void main() {
     expect(theme.bottomSheetTheme.shape, isA<RoundedRectangleBorder>());
     expect(theme.popupMenuTheme.shape, isA<RoundedRectangleBorder>());
   });
+
+  test('light theme uses a consistent product typography scale', () {
+    final textTheme = AppTheme.light().textTheme;
+
+    expect(textTheme.titleLarge?.fontSize, 22);
+    expect(textTheme.titleMedium?.fontSize, 18);
+    expect(textTheme.titleSmall?.fontSize, 16);
+    expect(textTheme.bodyLarge?.fontSize, 16);
+    expect(textTheme.bodyMedium?.fontSize, 15);
+    expect(textTheme.bodySmall?.fontSize, 13);
+    expect(textTheme.labelLarge?.fontSize, 15);
+    expect(textTheme.labelMedium?.fontSize, 13);
+    expect(textTheme.labelSmall?.fontSize, 12);
+  });
+
+  test('app bar title stays below page-title scale', () {
+    final titleStyle = AppTheme.light().appBarTheme.titleTextStyle;
+
+    expect(titleStyle?.fontSize, 20);
+    expect(titleStyle?.fontWeight, FontWeight.w800);
+    expect(AppTheme.light().appBarTheme.leadingWidth, 44);
+    expect(AppTheme.light().appBarTheme.titleSpacing, 4);
+  });
 }

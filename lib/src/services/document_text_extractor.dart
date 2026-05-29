@@ -22,15 +22,12 @@ class ImportedDocumentText {
 
 class DocumentTextExtractor {
   Future<ImportedDocumentText?> pickAndExtract() async {
-    final result = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: <String>['txt', 'pdf', 'docx'],
-      allowMultiple: false,
-      withData: true,
     );
-    final file = result?.files.single;
     if (file == null) return null;
-    final bytes = file.bytes ?? await File(file.path!).readAsBytes();
+    final bytes = await file.readAsBytes();
     final text = extractTextFromBytes(bytes, file.name);
     return ImportedDocumentText(name: file.name, text: text, path: file.path);
   }

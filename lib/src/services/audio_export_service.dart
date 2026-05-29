@@ -23,7 +23,7 @@ class AudioExportService implements AudioExportController {
     final bytes = await file.readAsBytes();
     final fileName = _fileNameFor(audio);
     final extension = p.extension(fileName).replaceFirst('.', '');
-    return FilePicker.platform.saveFile(
+    return FilePicker.saveFile(
       dialogTitle: '保存生成语音',
       fileName: fileName,
       type: FileType.custom,

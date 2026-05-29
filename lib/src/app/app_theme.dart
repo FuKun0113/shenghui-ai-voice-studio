@@ -48,6 +48,70 @@ class AppTheme {
       borderRadius: BorderRadius.circular(8),
       borderSide: BorderSide.none,
     );
+    final textTheme = base.textTheme
+        .copyWith(
+          titleLarge: _textStyle(
+            base.textTheme.titleLarge,
+            size: 22,
+            height: 1.18,
+            weight: FontWeight.w900,
+          ),
+          titleMedium: _textStyle(
+            base.textTheme.titleMedium,
+            size: 18,
+            height: 1.26,
+            weight: FontWeight.w800,
+          ),
+          titleSmall: _textStyle(
+            base.textTheme.titleSmall,
+            size: 16,
+            height: 1.28,
+            weight: FontWeight.w800,
+          ),
+          bodyLarge: _textStyle(
+            base.textTheme.bodyLarge,
+            size: 16,
+            height: 1.55,
+          ),
+          bodyMedium: _textStyle(
+            base.textTheme.bodyMedium,
+            size: 15,
+            height: 1.5,
+          ),
+          bodySmall: _textStyle(
+            base.textTheme.bodySmall,
+            size: 13,
+            height: 1.45,
+          ),
+          labelLarge: _textStyle(
+            base.textTheme.labelLarge,
+            size: 15,
+            height: 1.25,
+            weight: FontWeight.w800,
+          ),
+          labelMedium: _textStyle(
+            base.textTheme.labelMedium,
+            size: 13,
+            height: 1.25,
+            weight: FontWeight.w700,
+          ),
+          labelSmall: _textStyle(
+            base.textTheme.labelSmall,
+            size: 12,
+            height: 1.2,
+            weight: FontWeight.w700,
+          ),
+          headlineSmall: _textStyle(
+            base.textTheme.headlineSmall,
+            size: 24,
+            height: 1.2,
+            weight: FontWeight.w900,
+          ),
+        )
+        .apply(
+          bodyColor: const Color(0xFF172426),
+          displayColor: const Color(0xFF172426),
+        );
 
     return base.copyWith(
       colorScheme: scheme,
@@ -56,15 +120,15 @@ class AppTheme {
         centerTitle: false,
         elevation: 0,
         scrolledUnderElevation: 0,
-        titleTextStyle: base.textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w700,
+        leadingWidth: 44,
+        titleSpacing: 4,
+        titleTextStyle: textTheme.titleMedium?.copyWith(
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
           color: scheme.onSurface,
         ),
       ),
-      textTheme: base.textTheme.apply(
-        bodyColor: const Color(0xFF172426),
-        displayColor: const Color(0xFF172426),
-      ),
+      textTheme: textTheme,
       cardTheme: CardThemeData(
         elevation: 0,
         color: base.colorScheme.surface,
@@ -139,11 +203,11 @@ class AppTheme {
         backgroundColor: scheme.surface,
         elevation: 12,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        titleTextStyle: base.textTheme.titleLarge?.copyWith(
+        titleTextStyle: textTheme.titleLarge?.copyWith(
           color: scheme.onSurface,
           fontWeight: FontWeight.w900,
         ),
-        contentTextStyle: base.textTheme.bodyMedium?.copyWith(
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
           color: scheme.onSurfaceVariant,
           height: 1.45,
         ),
@@ -159,7 +223,7 @@ class AppTheme {
         color: scheme.surface,
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: base.textTheme.bodyMedium?.copyWith(
+        textStyle: textTheme.bodyMedium?.copyWith(
           color: scheme.onSurface,
           fontWeight: FontWeight.w700,
         ),
@@ -167,7 +231,7 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: scheme.surface,
-        contentTextStyle: base.textTheme.bodyMedium?.copyWith(
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
           color: scheme.onSurface,
           fontWeight: FontWeight.w700,
         ),
@@ -176,6 +240,20 @@ class AppTheme {
         insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+    );
+  }
+
+  static TextStyle _textStyle(
+    TextStyle? base, {
+    required double size,
+    required double height,
+    FontWeight? weight,
+  }) {
+    return (base ?? const TextStyle()).copyWith(
+      fontSize: size,
+      height: height,
+      fontWeight: weight,
+      letterSpacing: 0,
     );
   }
 }

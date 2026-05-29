@@ -43,7 +43,6 @@ class _AppShellState extends State<AppShell> {
           '声绘',
           key: const Key('mainBrandTitle'),
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontSize: 23,
             height: 1,
             fontWeight: FontWeight.w900,
             color: Theme.of(context).colorScheme.onSurface,

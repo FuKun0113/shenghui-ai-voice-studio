@@ -43,6 +43,7 @@ void main() {
       find.byKey(const Key('stylePromptField')),
       '年轻女性，温柔，清晰',
     );
+    expect(find.text('我确认拥有声音和文本的合法授权'), findsNothing);
     await tester.ensureVisible(find.text('生成并保存'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('生成并保存'));
@@ -75,6 +76,7 @@ void main() {
 
     expect(find.textContaining('请跟读'), findsNothing);
     expect(find.text('立即录音'), findsOneWidget);
+    expect(find.text('我确认拥有声音和文本的合法授权'), findsOneWidget);
     expect(find.textContaining('10-30 秒'), findsOneWidget);
     expect(find.textContaining('5 MB'), findsOneWidget);
     expect(find.textContaining('mp3/wav'), findsOneWidget);

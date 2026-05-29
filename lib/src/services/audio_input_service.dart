@@ -12,12 +12,11 @@ class AudioInputService {
   final AudioRecorder _recorder;
 
   Future<String?> pickReferenceAudio() async {
-    final result = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: <String>['mp3', 'wav'],
-      allowMultiple: false,
     );
-    final path = result?.files.single.path;
+    final path = file?.path;
     if (path == null) return null;
     return AudioValidator.requireSupported(path);
   }

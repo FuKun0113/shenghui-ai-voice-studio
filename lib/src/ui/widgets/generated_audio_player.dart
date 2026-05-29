@@ -166,12 +166,14 @@ class LargeGeneratedAudioPlayer extends StatelessWidget {
     required this.isPlaying,
     required this.playbackProgress,
     required this.onTogglePlay,
+    this.showCreatedAt = true,
   });
 
   final GeneratedAudio audio;
   final bool isPlaying;
   final double playbackProgress;
   final VoidCallback onTogglePlay;
+  final bool showCreatedAt;
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +214,9 @@ class LargeGeneratedAudioPlayer extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      '${formatGeneratedAudioTime(audio.createdAt)} · ${audio.voiceName} · ${formatAudioDuration(audio.durationMs)}',
+                      showCreatedAt
+                          ? '${formatGeneratedAudioTime(audio.createdAt)} · ${audio.voiceName} · ${formatAudioDuration(audio.durationMs)}'
+                          : '${audio.voiceName} · ${formatAudioDuration(audio.durationMs)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(

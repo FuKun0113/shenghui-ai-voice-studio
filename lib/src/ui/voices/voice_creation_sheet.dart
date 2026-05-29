@@ -50,6 +50,7 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
   bool _generatingClonePreview = false;
   bool _designPreviewPlaying = false;
   bool _clonePreviewPlaying = false;
+  bool _authorizationAccepted = false;
   String? _designPreviewPath;
   String? _clonePreviewPath;
   String? _managedReferencePath;
@@ -115,6 +116,7 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
       return;
     }
     if (!_designMode) {
+      if (!_ensureAuthorizationAccepted()) return;
       final path = _pathController.text.trim();
       if (path.isEmpty) {
         setState(() => _formError = '请先录制或上传参考音频');
@@ -206,6 +208,7 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
   }
 
   Future<void> _generateClonePreview() async {
+    if (!_ensureAuthorizationAccepted()) return;
     final path = _pathController.text.trim();
     if (path.isEmpty) {
       setState(() => _formError = '请先录制或上传参考音频');
@@ -285,6 +288,12 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
   void _applyDesignTemplate(String value) {
     _styleController.text = value;
     setState(() {});
+  }
+
+  bool _ensureAuthorizationAccepted() {
+    if (_authorizationAccepted) return true;
+    setState(() => _formError = '请先确认拥有合法授权，不克隆或冒用他人声音');
+    return false;
   }
 
   @override
@@ -422,6 +431,39 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
                         title: '上传音频要求',
                         text:
                             '建议 10-30 秒清晰单人声；安静环境录制；支持 mp3/wav；文件小于 5 MB；避免背景音乐、多人声和明显噪音。',
+                      ),
+                      const SizedBox(height: 10),
+                      AppPanel(
+                        padding: const EdgeInsets.all(12),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => setState(
+                            () => _authorizationAccepted =
+                                !_authorizationAccepted,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Checkbox(
+                                value: _authorizationAccepted,
+                                onChanged: (value) => setState(
+                                  () => _authorizationAccepted = value ?? false,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text('我确认拥有声音和文本的合法授权'),
+                                    SizedBox(height: 4),
+                                    Text('不会克隆、冒用或传播未经授权的他人声音，相关责任由我自行承担。'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 220),

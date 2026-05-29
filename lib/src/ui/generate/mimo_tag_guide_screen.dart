@@ -165,7 +165,7 @@ class _AdvancedExamplesPanel extends StatelessWidget {
         children: <Widget>[
           const SectionHeader(
             title: '高级使用案例',
-            subtitle: '点击案例查看文本、Instruct 和内置试听，再套用到生成页改写。',
+            subtitle: '点击案例查看表演指令、生成文本和内置试听，再套用到生成页改写。',
           ),
           const SizedBox(height: 12),
           for (final entry in mimoAdvancedExamples.indexed) ...<Widget>[
@@ -229,7 +229,7 @@ class _ExampleCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        '${example.sourceLabel} · ${example.scenario}',
+                        example.scenario,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -347,6 +347,7 @@ class _MimoExampleDetailScreenState extends State<MimoExampleDetailScreen> {
                 isPlaying: _isPlaying,
                 playbackProgress: _playbackProgress,
                 onTogglePlay: _togglePlay,
+                showCreatedAt: false,
               ),
               const SizedBox(height: 12),
               AppPanel(
@@ -355,8 +356,7 @@ class _MimoExampleDetailScreenState extends State<MimoExampleDetailScreen> {
                   children: <Widget>[
                     SectionHeader(
                       title: widget.example.title,
-                      subtitle:
-                          '${widget.example.sourceLabel}\n${widget.example.scenario}',
+                      subtitle: widget.example.scenario,
                     ),
                     const SizedBox(height: 10),
                     Text(

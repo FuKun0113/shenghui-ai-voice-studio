@@ -20,7 +20,13 @@ void main() {
 
     expect(find.text('文本生成'), findsOneWidget);
     expect(find.text('当前音色'), findsOneWidget);
-    expect(find.text('表演指令 / Instruct'), findsOneWidget);
+    expect(find.text('表演指令'), findsOneWidget);
+    expect(find.text('表演指令 / Instruct'), findsNothing);
     expect(find.text('声音参数'), findsNothing);
+
+    final voiceSelectorPanelHeight = tester
+        .getSize(find.byKey(const Key('voiceSelectorPanel')))
+        .height;
+    expect(voiceSelectorPanelHeight, lessThanOrEqualTo(132));
   });
 }

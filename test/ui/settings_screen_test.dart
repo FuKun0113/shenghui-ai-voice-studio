@@ -26,6 +26,7 @@ void main() {
     expect(find.text('文本优化服务'), findsOneWidget);
     expect(find.text('版权与授权声明'), findsOneWidget);
     expect(find.text('隐私与权限'), findsOneWidget);
+    expect(find.text('内容举报与反馈'), findsNothing);
     expect(find.text('关于本 App'), findsOneWidget);
     expect(find.text('常驻广告位预留'), findsNothing);
     expect(find.text('MiMo 服务'), findsNothing);
@@ -181,5 +182,9 @@ void main() {
     expect(find.textContaining('本地存储'), findsWidgets);
     expect(find.textContaining('API Key'), findsWidgets);
     expect(find.textContaining('不会上传到声绘后台'), findsWidgets);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.text('内容举报与反馈'), findsNothing);
   });
 }
