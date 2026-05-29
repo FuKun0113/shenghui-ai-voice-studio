@@ -5,12 +5,20 @@ import 'package:record/record.dart';
 
 import 'audio_validator.dart';
 
-class AudioInputService {
+abstract interface class AudioInputController {
+  Future<String?> pickReferenceAudio();
+  Future<String> startRecording();
+  Future<String?> stopRecording();
+  Future<void> dispose();
+}
+
+class AudioInputService implements AudioInputController {
   AudioInputService({AudioRecorder? recorder})
     : _recorder = recorder ?? AudioRecorder();
 
   final AudioRecorder _recorder;
 
+  @override
   Future<String?> pickReferenceAudio() async {
     final file = await FilePicker.pickFile(
       type: FileType.custom,
@@ -21,6 +29,7 @@ class AudioInputService {
     return AudioValidator.requireSupported(path);
   }
 
+  @override
   Future<String> startRecording() async {
     final hasPermission = await _recorder.hasPermission();
     if (!hasPermission) {
@@ -38,12 +47,14 @@ class AudioInputService {
     return filePath;
   }
 
+  @override
   Future<String?> stopRecording() async {
     final path = await _recorder.stop();
     if (path == null) return null;
     return AudioValidator.requireSupported(path);
   }
 
+  @override
   Future<void> dispose() {
     return _recorder.dispose();
   }

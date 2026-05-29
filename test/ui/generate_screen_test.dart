@@ -238,6 +238,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(AppBar, '标签与高级案例'), findsOneWidget);
+    expect(find.text('标签与高级案例'), findsOneWidget);
     expect(find.text('风格标签'), findsOneWidget);
     expect(find.text('音频标签'), findsOneWidget);
     expect(find.text('沧桑老前辈叙事'), findsOneWidget);

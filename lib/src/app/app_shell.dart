@@ -1,12 +1,16 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../domain/remote_app_config.dart';
 import '../state/app_state.dart';
 import '../ui/generate/generate_screen.dart';
 import '../ui/history/history_screen.dart';
 import '../ui/settings/settings_screen.dart';
 import '../ui/voices/voice_library_screen.dart';
+import '../ui/widgets/app_panel.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key, required this.appState});
@@ -19,6 +23,24 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _index = 0;
+  int _currentVersionCode = 1;
+  bool _remotePromptScheduled = false;
+  bool _updateDialogShown = false;
+  bool _popupNoticeShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.appState.addListener(_scheduleRemotePrompts);
+    _loadVersionCode();
+    _scheduleRemotePrompts();
+  }
+
+  @override
+  void dispose() {
+    widget.appState.removeListener(_scheduleRemotePrompts);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +114,131 @@ class _AppShellState extends State<AppShell> {
         ],
       ),
     );
+  }
+
+  Future<void> _loadVersionCode() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final buildNumber = int.tryParse(packageInfo.buildNumber);
+      if (!mounted || buildNumber == null) return;
+      setState(() => _currentVersionCode = buildNumber);
+      _scheduleRemotePrompts();
+    } on Object {
+      _scheduleRemotePrompts();
+    }
+  }
+
+  void _scheduleRemotePrompts() {
+    if (_remotePromptScheduled || !mounted) return;
+    _remotePromptScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _remotePromptScheduled = false;
+      _showRemotePrompts();
+    });
+  }
+
+  void _showRemotePrompts() {
+    final config = widget.appState.remoteAppConfig;
+    if (!_updateDialogShown &&
+        (config.updatePolicy.requiresUpdate(
+              currentVersionCode: _currentVersionCode,
+            ) ||
+            config.updatePolicy.hasOptionalUpdate(
+              currentVersionCode: _currentVersionCode,
+            ))) {
+      _updateDialogShown = true;
+      final forceUpdate = config.updatePolicy.requiresUpdate(
+        currentVersionCode: _currentVersionCode,
+      );
+      _showUpdateDialog(config.updatePolicy, forceUpdate: forceUpdate);
+      return;
+    }
+    final notice = config.popupNotice;
+    if (!_popupNoticeShown && notice.enabled) {
+      _popupNoticeShown = true;
+      _showPopupNotice(notice);
+    }
+  }
+
+  Future<void> _showUpdateDialog(
+    RemoteUpdatePolicy policy, {
+    required bool forceUpdate,
+  }) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: !forceUpdate,
+      builder: (context) {
+        final scheme = Theme.of(context).colorScheme;
+        return PopScope(
+          canPop: !forceUpdate,
+          child: AlertDialog(
+            icon: AppHugeIcon(
+              forceUpdate
+                  ? HugeIcons.strokeRoundedAlert02
+                  : HugeIcons.strokeRoundedRocket01,
+              color: forceUpdate ? scheme.error : scheme.primary,
+              size: 30,
+            ),
+            title: Text(forceUpdate ? '需要更新声绘' : '发现新版本'),
+            content: Text(
+              forceUpdate ? '当前版本已不可用，请更新后继续使用。' : '新版本已经可用，建议更新以获得更好的体验。',
+            ),
+            actions: <Widget>[
+              if (!forceUpdate)
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('稍后'),
+                ),
+              FilledButton(
+                onPressed: policy.updateUrl.isEmpty
+                    ? null
+                    : () => _openExternalUrl(policy.updateUrl),
+                child: const Text('立即更新'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showPopupNotice(RemotePopupNotice notice) {
+    return showDialog<void>(
+      context: context,
+      builder: (context) {
+        final scheme = Theme.of(context).colorScheme;
+        return AlertDialog(
+          icon: AppHugeIcon(
+            HugeIcons.strokeRoundedNotification01,
+            color: scheme.primary,
+            size: 30,
+          ),
+          title: Text(notice.title),
+          content: Text(notice.message),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('知道了'),
+            ),
+            if (notice.targetUrl.isNotEmpty)
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _openExternalUrl(notice.targetUrl);
+                },
+                child: const Text('查看'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _openExternalUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
 

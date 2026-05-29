@@ -89,11 +89,11 @@ class VoiceCard extends StatelessWidget {
                         ),
                 ),
                 IconButton(
-                  tooltip: isPreviewing ? '暂停' : '播放',
+                  tooltip: isPreviewing ? '停止' : '播放',
                   onPressed: onPreview,
                   icon: AppHugeIcon(
                     isPreviewing
-                        ? HugeIcons.strokeRoundedPause
+                        ? HugeIcons.strokeRoundedStop
                         : HugeIcons.strokeRoundedPlay,
                   ),
                 ),

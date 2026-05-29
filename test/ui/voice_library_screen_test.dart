@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:voice_clone_app/src/services/audio_playback_service.dart';
 import 'package:voice_clone_app/src/services/mock_mimo_service.dart';
 import 'package:voice_clone_app/src/state/app_state.dart';
 import 'package:voice_clone_app/src/ui/voices/voice_library_screen.dart';
@@ -32,6 +33,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(AppBar, '创建音色'), findsOneWidget);
+    expect(find.text('创建音色'), findsOneWidget);
 
     await tester.tap(find.text('设计音色'));
     await tester.pumpAndSettle();
@@ -76,7 +78,7 @@ void main() {
 
     expect(find.textContaining('请跟读'), findsNothing);
     expect(find.text('立即录音'), findsOneWidget);
-    expect(find.text('我确认拥有声音和文本的合法授权'), findsOneWidget);
+    expect(find.text('我确认拥有声音和文本的合法授权'), findsNothing);
     expect(find.textContaining('10-30 秒'), findsOneWidget);
     expect(find.textContaining('5 MB'), findsOneWidget);
     expect(find.textContaining('mp3/wav'), findsOneWidget);
@@ -124,5 +126,35 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(state.voices.any((voice) => voice.favorite), isTrue);
+  });
+
+  test('voice preview keeps stop affordance during playback startup', () {
+    expect(
+      shouldClearVoicePreview(
+        playingVoicePath: 'assets/audio/previews/bingtang.wav',
+        playback: const AudioPlaybackSnapshot(),
+        isStartingPreview: true,
+      ),
+      isFalse,
+    );
+    expect(
+      shouldClearVoicePreview(
+        playingVoicePath: 'assets/audio/previews/bingtang.wav',
+        playback: const AudioPlaybackSnapshot(
+          path: 'assets/audio/previews/bingtang.wav',
+          isPlaying: false,
+        ),
+        isStartingPreview: false,
+      ),
+      isFalse,
+    );
+    expect(
+      shouldClearVoicePreview(
+        playingVoicePath: 'assets/audio/previews/bingtang.wav',
+        playback: const AudioPlaybackSnapshot(),
+        isStartingPreview: false,
+      ),
+      isTrue,
+    );
   });
 }

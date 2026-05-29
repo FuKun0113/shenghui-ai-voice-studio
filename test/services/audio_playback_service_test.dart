@@ -54,9 +54,27 @@ void main() {
     expect(service.playbackState.value.isPlaying, isFalse);
     expect(service.playbackState.value.progress, 0);
   });
+
+  test(
+    'playFile publishes playing state before play future completes',
+    () async {
+      final player = FakeAudioPlayerAdapter(playCompleter: Completer<void>());
+      final service = AudioPlaybackService(player: player);
+
+      await service
+          .playFile('/tmp/generated.wav')
+          .timeout(const Duration(milliseconds: 20));
+
+      expect(service.playbackState.value.path, '/tmp/generated.wav');
+      expect(service.playbackState.value.isPlaying, isTrue);
+    },
+  );
 }
 
 class FakeAudioPlayerAdapter implements AudioPlayerAdapter {
+  FakeAudioPlayerAdapter({this.playCompleter});
+
+  final Completer<void>? playCompleter;
   final List<String> calls = <String>[];
   final StreamController<AudioEngineState> _stateController =
       StreamController<AudioEngineState>.broadcast();
@@ -87,6 +105,7 @@ class FakeAudioPlayerAdapter implements AudioPlayerAdapter {
   @override
   Future<void> play() async {
     calls.add('play');
+    await playCompleter?.future;
   }
 
   void emitState(AudioEngineState state) {

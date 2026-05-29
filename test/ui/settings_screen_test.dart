@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:voice_clone_app/src/app/app_theme.dart';
+import 'package:voice_clone_app/src/domain/remote_app_config.dart';
 import 'package:voice_clone_app/src/domain/service_config.dart';
 import 'package:voice_clone_app/src/domain/text_optimization_config.dart';
 import 'package:voice_clone_app/src/services/mock_mimo_service.dart';
+import 'package:voice_clone_app/src/services/remote_app_config_service.dart';
 import 'package:voice_clone_app/src/services/text_optimization_service.dart';
 import 'package:voice_clone_app/src/state/app_state.dart';
 import 'package:voice_clone_app/src/ui/settings/settings_screen.dart';
@@ -45,6 +47,8 @@ void main() {
 
     await tester.tap(find.text('语音服务'));
     await tester.pumpAndSettle();
+    expect(find.widgetWithText(AppBar, '语音服务'), findsOneWidget);
+    expect(find.text('语音服务'), findsOneWidget);
     expect(find.textContaining('目前默认适配小米 MiMo'), findsOneWidget);
     expect(find.textContaining('官方 API 接口和 API Key'), findsOneWidget);
     expect(find.textContaining('第三方兼容服务'), findsOneWidget);
@@ -68,7 +72,28 @@ void main() {
   testWidgets('settings menu opens the text optimization service page', (
     tester,
   ) async {
-    final state = AppState(mimoService: MockMimoService());
+    final state = AppState(
+      mimoService: MockMimoService(),
+      remoteAppConfigService: StaticRemoteAppConfigService(
+        const RemoteAppConfig(
+          adSlots: <RemoteAdSlot>[
+            RemoteAdSlot(
+              placement: 'text_optimization_service',
+              title: '文本模型推荐',
+              message: '选择适合润色和标签生成的文本模型。',
+              targetUrl: 'https://example.com/text-model',
+              enabled: true,
+            ),
+            RemoteAdSlot(
+              placement: 'text_optimization_service',
+              title: '隐藏文本广告',
+              enabled: false,
+            ),
+          ],
+        ),
+      ),
+    );
+    await state.loadRemoteAppConfig();
 
     await tester.pumpWidget(buildSettings(state));
     await tester.pumpAndSettle();
@@ -81,7 +106,45 @@ void main() {
     expect(find.textContaining('/v1'), findsWidgets);
     expect(find.text('模型'), findsOneWidget);
     expect(find.text('API URL'), findsOneWidget);
+    expect(find.text('文本模型推荐'), findsOneWidget);
+    expect(find.text('选择适合润色和标签生成的文本模型。'), findsOneWidget);
+    expect(find.text('隐藏文本广告'), findsNothing);
     expect(find.text('广告位预留'), findsNothing);
+  });
+
+  testWidgets('settings shows enabled remote ad slot cards only', (
+    tester,
+  ) async {
+    final state = AppState(
+      mimoService: MockMimoService(),
+      remoteAppConfigService: StaticRemoteAppConfigService(
+        const RemoteAppConfig(
+          adSlots: <RemoteAdSlot>[
+            RemoteAdSlot(
+              placement: 'settings_footer',
+              title: '服务推荐',
+              message: '领取语音服务额度',
+              targetUrl: 'https://example.com/promo',
+              enabled: true,
+            ),
+            RemoteAdSlot(
+              placement: 'settings_footer',
+              title: '隐藏广告',
+              enabled: false,
+            ),
+          ],
+        ),
+      ),
+    );
+    await state.loadRemoteAppConfig();
+
+    await tester.pumpWidget(buildSettings(state));
+    await tester.pumpAndSettle();
+
+    expect(find.text('服务推荐'), findsOneWidget);
+    expect(find.text('领取语音服务额度'), findsOneWidget);
+    expect(find.text('隐藏广告'), findsNothing);
+    expect(find.text('常驻广告位预留'), findsNothing);
   });
 
   testWidgets('saved text optimization model remains selectable', (
@@ -169,7 +232,8 @@ void main() {
 
     await tester.tap(find.text('版权与授权声明'));
     await tester.pumpAndSettle();
-    expect(find.text('版权与授权声明'), findsWidgets);
+    expect(find.widgetWithText(AppBar, '版权与授权声明'), findsOneWidget);
+    expect(find.text('版权与授权声明'), findsOneWidget);
     expect(find.textContaining('未经授权'), findsWidgets);
     expect(find.textContaining('用户自行承担'), findsWidgets);
     await tester.pageBack();
@@ -177,7 +241,8 @@ void main() {
 
     await tester.tap(find.text('隐私与权限'));
     await tester.pumpAndSettle();
-    expect(find.text('隐私与权限'), findsWidgets);
+    expect(find.widgetWithText(AppBar, '隐私与权限'), findsOneWidget);
+    expect(find.text('隐私与权限'), findsOneWidget);
     expect(find.textContaining('录音'), findsWidgets);
     expect(find.textContaining('本地存储'), findsWidgets);
     expect(find.textContaining('API Key'), findsWidgets);

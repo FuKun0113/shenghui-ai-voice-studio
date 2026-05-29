@@ -148,11 +148,19 @@ class AudioPlaybackService implements AudioPlaybackController {
     } else {
       await _player.setFilePath(path);
     }
-    await _player.play();
+    final playFuture = _player.play();
     _playbackState.value = _playbackState.value.copyWith(
       path: path,
       isPlaying: true,
       position: Duration.zero,
+    );
+    unawaited(
+      playFuture.catchError((Object error, StackTrace stackTrace) {
+        if (_playbackState.value.path == path) {
+          _playbackState.value = const AudioPlaybackSnapshot();
+        }
+        debugPrint('Audio playback failed: $error');
+      }),
     );
   }
 

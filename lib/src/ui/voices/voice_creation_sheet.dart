@@ -10,9 +10,16 @@ import '../../state/app_state.dart';
 import '../widgets/app_panel.dart';
 
 class VoiceCreationSheet extends StatefulWidget {
-  const VoiceCreationSheet({super.key, required this.appState});
+  const VoiceCreationSheet({
+    super.key,
+    required this.appState,
+    this.audioInputService,
+    this.showHeader = true,
+  });
 
   final AppState appState;
+  final AudioInputController? audioInputService;
+  final bool showHeader;
 
   @override
   State<VoiceCreationSheet> createState() => _VoiceCreationSheetState();
@@ -27,30 +34,30 @@ class VoiceCreationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('创建音色')),
-      body: SafeArea(child: VoiceCreationSheet(appState: appState)),
+      body: SafeArea(
+        child: VoiceCreationSheet(appState: appState, showHeader: false),
+      ),
     );
   }
 }
 
 class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
-  static const String _readAloudPrompt =
-      '请跟读：今天的天气很好，我正在用自然稳定的声音录制一段样本，帮助系统学习我的音色。';
+  static const String _readAloudPrompt = '今天阳光很好，窗外有微风。我用平稳清楚的声音，慢慢说完这段话。';
 
   bool _designMode = true;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _styleController = TextEditingController();
   final TextEditingController _pathController = TextEditingController();
-  final AudioInputService _audioInputService = AudioInputService();
+  late final AudioInputController _audioInputService =
+      widget.audioInputService ?? AudioInputService();
   String _gender = '不限定';
   bool _recording = false;
-  bool _showReadPrompt = false;
   bool _referencePlaying = false;
   bool _saving = false;
   bool _generatingPreview = false;
   bool _generatingClonePreview = false;
   bool _designPreviewPlaying = false;
   bool _clonePreviewPlaying = false;
-  bool _authorizationAccepted = false;
   String? _designPreviewPath;
   String? _clonePreviewPath;
   String? _managedReferencePath;
@@ -58,12 +65,45 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
   String? _validationMessage;
 
   @override
+  void initState() {
+    super.initState();
+    AudioPlaybackService.instance.playbackState.addListener(_syncPlaybackState);
+  }
+
+  @override
   void dispose() {
+    AudioPlaybackService.instance.playbackState.removeListener(
+      _syncPlaybackState,
+    );
     _nameController.dispose();
     _styleController.dispose();
     _pathController.dispose();
     unawaited(_audioInputService.dispose());
     super.dispose();
+  }
+
+  void _syncPlaybackState() {
+    if (!mounted) return;
+    final playback = AudioPlaybackService.instance.playbackState.value;
+    final referencePath = _pathController.text.trim();
+    final nextReferencePlaying =
+        referencePath.isNotEmpty && playback.isPlayingPath(referencePath);
+    final designPath = _designPreviewPath;
+    final nextDesignPreviewPlaying =
+        designPath != null && playback.isPlayingPath(designPath);
+    final clonePath = _clonePreviewPath;
+    final nextClonePreviewPlaying =
+        clonePath != null && playback.isPlayingPath(clonePath);
+    if (_referencePlaying == nextReferencePlaying &&
+        _designPreviewPlaying == nextDesignPreviewPlaying &&
+        _clonePreviewPlaying == nextClonePreviewPlaying) {
+      return;
+    }
+    setState(() {
+      _referencePlaying = nextReferencePlaying;
+      _designPreviewPlaying = nextDesignPreviewPlaying;
+      _clonePreviewPlaying = nextClonePreviewPlaying;
+    });
   }
 
   Future<void> _pickReferenceAudio() async {
@@ -84,7 +124,6 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
       await _audioInputService.startRecording();
       setState(() {
         _recording = true;
-        _showReadPrompt = true;
       });
     }
   }
@@ -93,7 +132,7 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
     final path = _pathController.text.trim();
     if (path.isEmpty) return;
     if (_referencePlaying) {
-      await AudioPlaybackService.instance.pause();
+      await AudioPlaybackService.instance.stop();
       if (mounted) setState(() => _referencePlaying = false);
       return;
     }
@@ -116,7 +155,6 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
       return;
     }
     if (!_designMode) {
-      if (!_ensureAuthorizationAccepted()) return;
       final path = _pathController.text.trim();
       if (path.isEmpty) {
         setState(() => _formError = '请先录制或上传参考音频');
@@ -191,7 +229,7 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
     final path = _designPreviewPath;
     if (path == null || path.isEmpty) return;
     if (_designPreviewPlaying) {
-      await AudioPlaybackService.instance.pause();
+      await AudioPlaybackService.instance.stop();
       if (mounted) setState(() => _designPreviewPlaying = false);
       return;
     }
@@ -208,7 +246,6 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
   }
 
   Future<void> _generateClonePreview() async {
-    if (!_ensureAuthorizationAccepted()) return;
     final path = _pathController.text.trim();
     if (path.isEmpty) {
       setState(() => _formError = '请先录制或上传参考音频');
@@ -256,7 +293,7 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
     final path = _clonePreviewPath;
     if (path == null || path.isEmpty) return;
     if (_clonePreviewPlaying) {
-      await AudioPlaybackService.instance.pause();
+      await AudioPlaybackService.instance.stop();
       if (mounted) setState(() => _clonePreviewPlaying = false);
       return;
     }
@@ -290,12 +327,6 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
     setState(() {});
   }
 
-  bool _ensureAuthorizationAccepted() {
-    if (_authorizationAccepted) return true;
-    setState(() => _formError = '请先确认拥有合法授权，不克隆或冒用他人声音');
-    return false;
-  }
-
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -310,27 +341,38 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const SectionHeader(
-            title: '创建音色',
-            subtitle: '设计音色会先生成试听参考音频，再用克隆能力复用。',
-          ),
-          const SizedBox(height: 14),
-          SegmentedButton<bool>(
-            segments: const <ButtonSegment<bool>>[
-              ButtonSegment<bool>(
-                value: true,
-                icon: AppHugeIcon(HugeIcons.strokeRoundedMagicWand02),
-                label: Text('设计音色'),
+          if (widget.showHeader) ...<Widget>[
+            const SectionHeader(
+              title: '创建音色',
+              subtitle: '设计音色会先生成试听参考音频，再用克隆能力复用。',
+            ),
+            const SizedBox(height: 14),
+          ] else ...<Widget>[
+            Text(
+              '设计音色会先生成试听参考音频，再用克隆能力复用。',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+                height: 1.45,
               ),
-              ButtonSegment<bool>(
+            ),
+            const SizedBox(height: 14),
+          ],
+          _FlatSegmentedPicker<bool>(
+            value: _designMode,
+            items: const <_FlatSegmentItem<bool>>[
+              _FlatSegmentItem<bool>(
+                value: true,
+                icon: HugeIcons.strokeRoundedMagicWand02,
+                label: '设计音色',
+              ),
+              _FlatSegmentItem<bool>(
                 value: false,
-                icon: AppHugeIcon(HugeIcons.strokeRoundedMic01),
-                label: Text('克隆音色'),
+                icon: HugeIcons.strokeRoundedMic01,
+                label: '克隆音色',
               ),
             ],
-            selected: <bool>{_designMode},
-            onSelectionChanged: (values) =>
-                setState(() => _designMode = values.first),
+            onChanged: (value) => setState(() => _designMode = value),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -342,27 +384,28 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
             ),
           ),
           const SizedBox(height: 12),
-          SegmentedButton<String>(
-            segments: const <ButtonSegment<String>>[
-              ButtonSegment<String>(
+          _FlatSegmentedPicker<String>(
+            value: _gender,
+            items: const <_FlatSegmentItem<String>>[
+              _FlatSegmentItem<String>(
                 value: '不限定',
-                icon: AppHugeIcon(HugeIcons.strokeRoundedSettings05),
-                label: Text('不限定'),
+                icon: HugeIcons.strokeRoundedSettings05,
+                label: '不限定',
               ),
-              ButtonSegment<String>(
+              _FlatSegmentItem<String>(
                 value: '男声',
-                icon: AppHugeIcon(HugeIcons.strokeRoundedMale02),
-                label: Text('男声', key: Key('maleVoiceSegment')),
+                icon: HugeIcons.strokeRoundedMale02,
+                label: '男声',
+                key: Key('maleVoiceSegment'),
               ),
-              ButtonSegment<String>(
+              _FlatSegmentItem<String>(
                 value: '女声',
-                icon: AppHugeIcon(HugeIcons.strokeRoundedFemale02),
-                label: Text('女声', key: Key('femaleVoiceSegment')),
+                icon: HugeIcons.strokeRoundedFemale02,
+                label: '女声',
+                key: Key('femaleVoiceSegment'),
               ),
             ],
-            selected: <String>{_gender},
-            onSelectionChanged: (values) =>
-                setState(() => _gender = values.first),
+            onChanged: (value) => setState(() => _gender = value),
           ),
           const SizedBox(height: 12),
           AnimatedSwitcher(
@@ -413,9 +456,9 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
                                   ? null
                                   : _toggleDesignPreviewPlayback,
                               icon: _designPreviewPlaying
-                                  ? HugeIcons.strokeRoundedPause
+                                  ? HugeIcons.strokeRoundedStop
                                   : HugeIcons.strokeRoundedPlay,
-                              label: '播放试听',
+                              label: _designPreviewPlaying ? '停止试听' : '播放试听',
                             ),
                           ),
                         ],
@@ -426,59 +469,24 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
                     key: const ValueKey<String>('cloneModeFields'),
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      const _RequirementBox(
-                        icon: HugeIcons.strokeRoundedFileAudio,
-                        title: '上传音频要求',
-                        text:
-                            '建议 10-30 秒清晰单人声；安静环境录制；支持 mp3/wav；文件小于 5 MB；避免背景音乐、多人声和明显噪音。',
-                      ),
-                      const SizedBox(height: 10),
-                      AppPanel(
-                        padding: const EdgeInsets.all(12),
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () => setState(
-                            () => _authorizationAccepted =
-                                !_authorizationAccepted,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Checkbox(
-                                value: _authorizationAccepted,
-                                onChanged: (value) => setState(
-                                  () => _authorizationAccepted = value ?? false,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Text('我确认拥有声音和文本的合法授权'),
-                                    SizedBox(height: 4),
-                                    Text('不会克隆、冒用或传播未经授权的他人声音，相关责任由我自行承担。'),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 220),
                         switchInCurve: Curves.easeOutCubic,
-                        child: _showReadPrompt
-                            ? Padding(
-                                padding: const EdgeInsets.only(top: 10),
-                                child: _RequirementBox(
-                                  icon: HugeIcons.strokeRoundedVoice,
-                                  title: _recording ? '正在录音，请跟读' : '录音跟读文本',
-                                  text: _readAloudPrompt,
-                                  active: _recording,
-                                ),
+                        child: _recording
+                            ? const _RequirementBox(
+                                key: ValueKey<String>('recordingPrompt'),
+                                icon: HugeIcons.strokeRoundedVoice,
+                                title: '正在录音，请自然朗读',
+                                text: _readAloudPrompt,
+                                active: true,
                               )
-                            : const SizedBox.shrink(),
+                            : const _RequirementBox(
+                                key: ValueKey<String>('uploadRequirements'),
+                                icon: HugeIcons.strokeRoundedFileAudio,
+                                title: '上传音频要求',
+                                text:
+                                    '建议 10-30 秒清晰单人声；安静环境录制；支持 mp3/wav；文件小于 5 MB；避免背景音乐、多人声和明显噪音。',
+                              ),
                       ),
                       const SizedBox(height: 10),
                       Row(
@@ -510,10 +518,12 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
                             ? null
                             : _toggleReferencePlayback,
                         icon: _referencePlaying
-                            ? HugeIcons.strokeRoundedPause
+                            ? HugeIcons.strokeRoundedStop
                             : HugeIcons.strokeRoundedPlay,
                         label: _pathController.text.trim().isEmpty
                             ? '参考音频'
+                            : _referencePlaying
+                            ? '停止参考音频'
                             : '播放参考音频',
                       ),
                       if (_validationMessage != null) ...<Widget>[
@@ -547,9 +557,9 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
                                   ? null
                                   : _toggleClonePreviewPlayback,
                               icon: _clonePreviewPlaying
-                                  ? HugeIcons.strokeRoundedPause
+                                  ? HugeIcons.strokeRoundedStop
                                   : HugeIcons.strokeRoundedPlay,
-                              label: '播放试听',
+                              label: _clonePreviewPlaying ? '停止试听' : '播放试听',
                             ),
                           ),
                         ],
@@ -577,6 +587,130 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FlatSegmentItem<T> {
+  const _FlatSegmentItem({
+    required this.value,
+    required this.icon,
+    required this.label,
+    this.key,
+  });
+
+  final T value;
+  final List<List<dynamic>> icon;
+  final String label;
+  final Key? key;
+}
+
+class _FlatSegmentedPicker<T> extends StatelessWidget {
+  const _FlatSegmentedPicker({
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final T value;
+  final List<_FlatSegmentItem<T>> items;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.48),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Row(
+          children: <Widget>[
+            for (final item in items)
+              Expanded(
+                child: _FlatSegmentButton<T>(
+                  item: item,
+                  selected: item.value == value,
+                  onTap: () => onChanged(item.value),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FlatSegmentButton<T> extends StatelessWidget {
+  const _FlatSegmentButton({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _FlatSegmentItem<T> item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = selected ? scheme.primary : scheme.onSurfaceVariant;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: selected ? scheme.primaryContainer : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: selected
+            ? <BoxShadow>[
+                BoxShadow(
+                  color: scheme.primary.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onTap,
+          child: SizedBox(
+            height: 48,
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  AppHugeIcon(
+                    selected
+                        ? HugeIcons.strokeRoundedCheckmarkCircle02
+                        : item.icon,
+                    color: color,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      item.label,
+                      key: item.key,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: selected ? scheme.onPrimaryContainer : color,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -696,6 +830,7 @@ class _PromptDimensionChip extends StatelessWidget {
 
 class _RequirementBox extends StatelessWidget {
   const _RequirementBox({
+    super.key,
     required this.icon,
     required this.title,
     required this.text,

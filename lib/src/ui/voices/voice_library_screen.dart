@@ -25,6 +25,7 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
   String _filter = '全部';
   String? _playingVoiceId;
   String? _playingVoicePath;
+  String? _startingPreviewVoiceId;
 
   @override
   void initState() {
@@ -45,17 +46,16 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
 
   void _syncPlayback() {
     final state = AudioPlaybackService.instance.playbackState.value;
-    final pendingPreview = _playingVoicePath?.startsWith('pending:') ?? false;
-    final shouldClear =
-        _playingVoiceId != null &&
-        !pendingPreview &&
-        (_playingVoicePath == null ||
-            !state.isPlaying ||
-            state.path != _playingVoicePath);
-    if (shouldClear && mounted) {
+    final shouldClear = shouldClearVoicePreview(
+      playingVoicePath: _playingVoicePath,
+      playback: state,
+      isStartingPreview: _startingPreviewVoiceId != null,
+    );
+    if (_playingVoiceId != null && shouldClear && mounted) {
       setState(() {
         _playingVoiceId = null;
         _playingVoicePath = null;
+        _startingPreviewVoiceId = null;
       });
     }
   }
@@ -70,11 +70,12 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
 
   Future<void> _togglePreview(Voice voice) async {
     if (_playingVoiceId == voice.id) {
-      await AudioPlaybackService.instance.pause();
+      await AudioPlaybackService.instance.stop();
       if (mounted) {
         setState(() {
           _playingVoiceId = null;
           _playingVoicePath = null;
+          _startingPreviewVoiceId = null;
         });
       }
       return;
@@ -83,11 +84,13 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
     setState(() {
       _playingVoiceId = voice.id;
       _playingVoicePath = voice.previewAudioPath ?? 'pending:${voice.id}';
+      _startingPreviewVoiceId = voice.id;
     });
     final messenger = ScaffoldMessenger.of(context);
     try {
       if (voice.previewAudioPath != null) {
         await AudioPlaybackService.instance.playFile(voice.previewAudioPath!);
+        if (mounted) setState(() => _startingPreviewVoiceId = null);
         return;
       }
       final audio = await widget.appState.previewVoice(voice);
@@ -95,11 +98,13 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
         setState(() => _playingVoicePath = audio.audioPath);
       }
       await AudioPlaybackService.instance.playFile(audio.audioPath);
+      if (mounted) setState(() => _startingPreviewVoiceId = null);
     } on Object catch (error) {
       if (mounted) {
         setState(() {
           _playingVoiceId = null;
           _playingVoicePath = null;
+          _startingPreviewVoiceId = null;
         });
       }
       messenger.showSnackBar(SnackBar(content: Text('试听失败：$error')));
@@ -254,6 +259,21 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
       return bTime.compareTo(aTime);
     });
   }
+}
+
+@visibleForTesting
+bool shouldClearVoicePreview({
+  required String? playingVoicePath,
+  required AudioPlaybackSnapshot playback,
+  required bool isStartingPreview,
+}) {
+  if (playingVoicePath == null || playingVoicePath.startsWith('pending:')) {
+    return false;
+  }
+  if (isStartingPreview) return false;
+  final playbackPath = playback.path;
+  if (playbackPath == null) return true;
+  return playbackPath != playingVoicePath;
 }
 
 class _VoiceList extends StatelessWidget {

@@ -1,29 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:voice_clone_app/src/services/audio_input_service.dart';
 import 'package:voice_clone_app/src/services/mock_mimo_service.dart';
 import 'package:voice_clone_app/src/state/app_state.dart';
 import 'package:voice_clone_app/src/ui/voices/voice_creation_sheet.dart';
 
 void main() {
-  testWidgets('design mode guides users to write professional voice prompts', (
-    tester,
-  ) async {
-    final state = AppState(mimoService: MockMimoService());
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => FilledButton(
-              onPressed: () => showModalBottomSheet<void>(
-                context: context,
-                builder: (_) => VoiceCreationSheet(appState: state),
+  Widget buildSheet(AppState state, {AudioInputController? audioInputService}) {
+    return MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => FilledButton(
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              builder: (_) => VoiceCreationSheet(
+                appState: state,
+                audioInputService: audioInputService,
               ),
-              child: const Text('open'),
             ),
+            child: const Text('open'),
           ),
         ),
       ),
     );
+  }
+
+  testWidgets('design mode guides users to write professional voice prompts', (
+    tester,
+  ) async {
+    final state = AppState(mimoService: MockMimoService());
+    await tester.pumpWidget(buildSheet(state));
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -51,21 +57,7 @@ void main() {
     tester,
   ) async {
     final state = AppState(mimoService: MockMimoService());
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => FilledButton(
-              onPressed: () => showModalBottomSheet<void>(
-                context: context,
-                builder: (_) => VoiceCreationSheet(appState: state),
-              ),
-              child: const Text('open'),
-            ),
-          ),
-        ),
-      ),
-    );
+    await tester.pumpWidget(buildSheet(state));
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -82,21 +74,7 @@ void main() {
     tester,
   ) async {
     final state = AppState(mimoService: MockMimoService());
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => FilledButton(
-              onPressed: () => showModalBottomSheet<void>(
-                context: context,
-                builder: (_) => VoiceCreationSheet(appState: state),
-              ),
-              child: const Text('open'),
-            ),
-          ),
-        ),
-      ),
-    );
+    await tester.pumpWidget(buildSheet(state));
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -107,37 +85,44 @@ void main() {
     expect(find.text('播放试听'), findsOneWidget);
   });
 
-  testWidgets('clone mode requires explicit authorization confirmation', (
-    tester,
-  ) async {
-    final state = AppState(mimoService: MockMimoService());
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => FilledButton(
-              onPressed: () => showModalBottomSheet<void>(
-                context: context,
-                builder: (_) => VoiceCreationSheet(appState: state),
-              ),
-              child: const Text('open'),
-            ),
-          ),
-        ),
-      ),
-    );
+  testWidgets(
+    'clone mode removes authorization card and overlays requirements while recording',
+    (tester) async {
+      final state = AppState(mimoService: MockMimoService());
+      await tester.pumpWidget(
+        buildSheet(state, audioInputService: FakeAudioInputController()),
+      );
 
-    await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('克隆音色'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('合法授权'), findsWidgets);
-    await tester.enterText(find.byKey(const Key('voiceNameField')), '授权测试');
-    await tester.ensureVisible(find.text('生成并保存'));
-    await tester.tap(find.text('生成并保存'));
-    await tester.pump();
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('克隆音色'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('合法授权'), findsNothing);
+      expect(find.text('上传音频要求'), findsOneWidget);
 
-    expect(find.textContaining('请先确认拥有合法授权'), findsOneWidget);
-    expect(find.textContaining('不克隆或冒用他人声音'), findsOneWidget);
-  });
+      await tester.ensureVisible(find.text('立即录音'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('立即录音'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('上传音频要求'), findsNothing);
+      expect(find.text('正在录音，请自然朗读'), findsOneWidget);
+      expect(find.textContaining('今天阳光很好'), findsOneWidget);
+      expect(find.textContaining('请跟读：'), findsNothing);
+    },
+  );
+}
+
+class FakeAudioInputController implements AudioInputController {
+  @override
+  Future<void> dispose() async {}
+
+  @override
+  Future<String?> pickReferenceAudio() async => null;
+
+  @override
+  Future<String> startRecording() async => '/tmp/reference.wav';
+
+  @override
+  Future<String?> stopRecording() async => '/tmp/reference.wav';
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../domain/connection_test_result.dart';
+import '../../domain/remote_app_config.dart';
 import '../../domain/service_config.dart';
 import '../../domain/text_optimization_config.dart';
 import '../../state/app_state.dart';
@@ -21,7 +23,26 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   @override
+  void initState() {
+    super.initState();
+    widget.appState.addListener(_syncRemoteConfig);
+  }
+
+  @override
+  void dispose() {
+    widget.appState.removeListener(_syncRemoteConfig);
+    super.dispose();
+  }
+
+  void _syncRemoteConfig() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final settingsAdSlots = widget.appState.remoteAppConfig.enabledAdSlots
+        .where((slot) => slot.placement == 'settings_footer')
+        .toList();
     final sections = <Widget>[
       AppPanel(
         child: Row(
@@ -177,6 +198,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
+      for (final slot in settingsAdSlots)
+        _RemoteAdSlotCard(slot: slot, icon: HugeIcons.strokeRoundedMegaphone01),
     ];
 
     return SingleChildScrollView(
@@ -220,7 +243,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context,
       title: title,
       icon: icon,
-      child: _SettingsInfoPage(title: title, icon: icon, body: body),
+      child: _SettingsInfoPage(body: body),
     );
   }
 }
@@ -251,14 +274,8 @@ class _SettingsDetailPage extends StatelessWidget {
 }
 
 class _SettingsInfoPage extends StatelessWidget {
-  const _SettingsInfoPage({
-    required this.title,
-    required this.icon,
-    required this.body,
-  });
+  const _SettingsInfoPage({required this.body});
 
-  final String title;
-  final List<List<dynamic>> icon;
   final List<Widget> body;
 
   @override
@@ -266,23 +283,6 @@ class _SettingsInfoPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        AppPanel(
-          child: Row(
-            children: <Widget>[
-              IconBadge(icon: icon),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
         for (final entry in body.indexed) ...<Widget>[
           if (entry.$1 != 0) const SizedBox(height: 12),
           entry.$2,
@@ -359,25 +359,30 @@ class _VoiceServicePageState extends State<_VoiceServicePage> {
 
   @override
   Widget build(BuildContext context) {
+    final promoLink = widget.appState.remoteAppConfig.promoLink;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const AppPanel(
+        AppPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              SectionHeader(
-                title: '语音服务',
-                subtitle: '目前默认适配小米 MiMo 的语音服务，也支持兼容同一接口形态的第三方服务。',
+              Text(
+                '目前默认适配小米 MiMo 的语音服务，也支持兼容同一接口形态的第三方服务。',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                  height: 1.5,
+                ),
               ),
-              SizedBox(height: 10),
-              _LabeledInfoBlock(
+              const SizedBox(height: 10),
+              const _LabeledInfoBlock(
                 label: '可用服务',
                 description:
                     '你可以使用小米 MiMo 官方 API 接口和 API Key，也可以填写第三方兼容服务；第三方服务必须同时具备 mimo-v2.5-tts、mimo-v2.5-tts-voiceclone、mimo-v2.5-tts-voicedesign 这三类能力。',
               ),
-              SizedBox(height: 10),
-              _LabeledInfoBlock(
+              const SizedBox(height: 10),
+              const _LabeledInfoBlock(
                 label: '填写方式',
                 description:
                     'API URL 建议只填写到 /v1，例如 https://api.xiaomimimo.com/v1；应用会自动拼接 /chat/completions。API Key 填写服务商提供的密钥，保存在本机。',
@@ -385,6 +390,19 @@ class _VoiceServicePageState extends State<_VoiceServicePage> {
             ],
           ),
         ),
+        if (promoLink.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 12),
+          _RemoteAdSlotCard(
+            slot: RemoteAdSlot(
+              placement: 'voice_service_promo',
+              title: '语音服务入口',
+              message: '打开服务页面，申请或管理语音生成 API 额度。',
+              targetUrl: promoLink,
+              enabled: true,
+            ),
+            icon: HugeIcons.strokeRoundedRocket01,
+          ),
+        ],
         const SizedBox(height: 12),
         AppPanel(
           child: Column(
@@ -559,29 +577,50 @@ class _TextOptimizationServicePageState
         : currentModel.isNotEmpty
         ? <String>[currentModel]
         : const <String>[];
+    final textOptimizationAdSlots = widget
+        .appState
+        .remoteAppConfig
+        .enabledAdSlots
+        .where((slot) => slot.placement == 'text_optimization_service')
+        .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        AppPanel(
+        const AppPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              const SectionHeader(
+              SectionHeader(
                 title: 'OpenAI 兼容接口',
                 subtitle: '用于生成表演指令、润色正文、自动加入风格标签和音频标签。',
               ),
-              const SizedBox(height: 10),
-              const _LabeledInfoBlock(
+              SizedBox(height: 10),
+              _LabeledInfoBlock(
                 label: '用途',
                 description:
                     '这个模型只负责文本优化：根据正文生成表演指令、把已有文本润色成更适合配音的表达，或自动插入风格标签和音频标签；它不会直接生成语音。',
               ),
-              const SizedBox(height: 10),
-              const _LabeledInfoBlock(
+              SizedBox(height: 10),
+              _LabeledInfoBlock(
                 label: '填写方式',
                 description:
                     'API URL 填写 OpenAI 兼容服务的基础地址，通常到 /v1 为止，例如 https://api.openai.com/v1。API Key 填写该服务提供的密钥，然后点击获取模型并选择一个文本模型。',
               ),
+            ],
+          ),
+        ),
+        for (final slot in textOptimizationAdSlots) ...<Widget>[
+          const SizedBox(height: 12),
+          _RemoteAdSlotCard(
+            slot: slot,
+            icon: HugeIcons.strokeRoundedMagicWand02,
+          ),
+        ],
+        const SizedBox(height: 12),
+        AppPanel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
               const SizedBox(height: 14),
               TextField(
                 controller: _apiUrlController,
@@ -974,6 +1013,69 @@ class _MenuTile extends StatelessWidget {
   }
 }
 
+class _RemoteAdSlotCard extends StatelessWidget {
+  const _RemoteAdSlotCard({required this.slot, required this.icon});
+
+  final RemoteAdSlot slot;
+  final List<List<dynamic>> icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: slot.targetUrl.isEmpty
+            ? null
+            : () => _openExternalUrl(slot.targetUrl),
+        child: AppPanel(
+          emphasized: true,
+          child: Row(
+            children: <Widget>[
+              AppHugeIcon(icon, color: scheme.primary, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      slot.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (slot.message.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 4),
+                      Text(
+                        slot.message,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (slot.targetUrl.isNotEmpty) ...<Widget>[
+                const SizedBox(width: 10),
+                AppHugeIcon(
+                  HugeIcons.strokeRoundedArrowUpRight01,
+                  color: scheme.primary,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AboutBrandCard extends StatelessWidget {
   const _AboutBrandCard();
 
@@ -1151,4 +1253,10 @@ class _LabeledInfoBlock extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _openExternalUrl(String url) async {
+  final uri = Uri.tryParse(url);
+  if (uri == null) return;
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
 }

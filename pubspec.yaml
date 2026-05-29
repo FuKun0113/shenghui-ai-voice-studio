@@ -51,6 +51,10 @@ dependencies:
   animations: ^2.2.0
   just_waveform: ^0.0.7
   hugeicons: ^1.1.7
+  firebase_core: ^4.9.0
+  firebase_remote_config: ^6.5.1
+  package_info_plus: ^10.1.0
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

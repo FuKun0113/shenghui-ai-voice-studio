@@ -24,9 +24,13 @@ class MimoTagGuideScreen extends StatelessWidget {
             const IconBadge(icon: HugeIcons.strokeRoundedAiAudio),
             const SizedBox(width: 12),
             Expanded(
-              child: SectionHeader(
-                title: '标签与高级案例',
-                subtitle: '风格标签写在文本开头，音频标签插入到具体句子位置。',
+              child: Text(
+                '风格标签写在文本开头，音频标签插入到具体句子位置。',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                  height: 1.45,
+                ),
               ),
             ),
           ],
