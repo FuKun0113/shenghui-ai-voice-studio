@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../../domain/voice.dart';
+import '../../services/audio_playback_service.dart';
 import '../../state/app_state.dart';
+import '../widgets/app_panel.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/voice_card.dart';
 import 'voice_creation_sheet.dart';
 
@@ -15,26 +19,103 @@ class VoiceLibraryScreen extends StatefulWidget {
 }
 
 class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
+  static const List<String> _filters = <String>[
+    '全部',
+    '官方',
+    'AI 音色',
+    '男声',
+    '女声',
+    '中文',
+    '英文',
+    '收藏',
+  ];
+
+  final TextEditingController _searchController = TextEditingController();
+  String _filter = '全部';
+  String? _playingVoiceId;
+  String? _playingVoicePath;
+
   @override
   void initState() {
     super.initState();
     widget.appState.addListener(_sync);
+    AudioPlaybackService.instance.playbackState.addListener(_syncPlayback);
   }
 
   @override
   void dispose() {
     widget.appState.removeListener(_sync);
+    AudioPlaybackService.instance.playbackState.removeListener(_syncPlayback);
+    _searchController.dispose();
     super.dispose();
   }
 
   void _sync() => setState(() {});
 
+  void _syncPlayback() {
+    final state = AudioPlaybackService.instance.playbackState.value;
+    final pendingPreview = _playingVoicePath?.startsWith('pending:') ?? false;
+    final shouldClear =
+        _playingVoiceId != null &&
+        !pendingPreview &&
+        (_playingVoicePath == null ||
+            !state.isPlaying ||
+            state.path != _playingVoicePath);
+    if (shouldClear && mounted) {
+      setState(() {
+        _playingVoiceId = null;
+        _playingVoicePath = null;
+      });
+    }
+  }
+
   void _openCreationSheet() {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => VoiceCreationSheet(appState: widget.appState),
     );
+  }
+
+  Future<void> _togglePreview(Voice voice) async {
+    if (_playingVoiceId == voice.id) {
+      await AudioPlaybackService.instance.pause();
+      if (mounted) {
+        setState(() {
+          _playingVoiceId = null;
+          _playingVoicePath = null;
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _playingVoiceId = voice.id;
+      _playingVoicePath = voice.previewAudioPath ?? 'pending:${voice.id}';
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      if (voice.previewAudioPath != null) {
+        await AudioPlaybackService.instance.playFile(voice.previewAudioPath!);
+        return;
+      }
+      final audio = await widget.appState.previewVoice(voice);
+      if (mounted) {
+        setState(() => _playingVoicePath = audio.audioPath);
+      }
+      await AudioPlaybackService.instance.playFile(audio.audioPath);
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _playingVoiceId = null;
+          _playingVoicePath = null;
+        });
+      }
+      messenger.showSnackBar(SnackBar(content: Text('试听失败：$error')));
+    }
   }
 
   @override
@@ -45,63 +126,182 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
     final aiVoices = widget.appState.voices
         .where((voice) => voice.type != VoiceType.builtin)
         .toList();
+    final visibleVoices = _filteredVoices(widget.appState.voices);
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        body: Column(
-          children: <Widget>[
-            const TabBar(
-              tabs: <Widget>[
-                Tab(text: '默认音色'),
-                Tab(text: 'AI 音色'),
-              ],
-            ),
-            Expanded(
-              child: TabBarView(
+    return Scaffold(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: AppPanel(
+              child: Row(
                 children: <Widget>[
-                  _VoiceList(appState: widget.appState, voices: builtinVoices),
-                  _VoiceList(appState: widget.appState, voices: aiVoices),
+                  const IconBadge(icon: HugeIcons.strokeRoundedLibrary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          '音色库',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${builtinVoices.length} 个默认音色 · ${aiVoices.length} 个 AI 音色',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _openCreationSheet,
-          icon: const Icon(Icons.add),
-          label: const Text('创建音色'),
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              key: const Key('voiceSearchField'),
+              controller: _searchController,
+              decoration: const InputDecoration(
+                labelText: '搜索音色',
+                prefixIcon: AppPrefixIcon(HugeIcons.strokeRoundedSearch01),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: <Widget>[
+                for (final filter in _filters) ...<Widget>[
+                  FilterChip(
+                    label: Text(filter),
+                    selected: _filter == filter,
+                    onSelected: (_) => setState(() => _filter = filter),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: Text(
+              '${visibleVoices.length} 个匹配音色',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Expanded(
+            child: _VoiceList(
+              appState: widget.appState,
+              voices: visibleVoices,
+              playingVoiceId: _playingVoiceId,
+              onTogglePreview: _togglePreview,
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openCreationSheet,
+        icon: const AppHugeIcon(HugeIcons.strokeRoundedAdd01),
+        label: const Text('创建音色'),
       ),
     );
+  }
+
+  List<Voice> _filteredVoices(List<Voice> voices) {
+    final query = _searchController.text.trim().toLowerCase();
+    return voices.where((voice) {
+      final haystack = <String>[
+        voice.name,
+        ?voice.language,
+        ?voice.gender,
+        ...voice.tags,
+      ].join(' ').toLowerCase();
+      if (query.isNotEmpty && !haystack.contains(query)) return false;
+      return switch (_filter) {
+        '官方' => voice.type == VoiceType.builtin,
+        'AI 音色' => voice.type != VoiceType.builtin,
+        '男声' =>
+          voice.gender == '男性' ||
+              voice.gender == '男声' ||
+              voice.gender == 'Male' ||
+              voice.tags.contains('男声') ||
+              voice.tags.contains('Male'),
+        '女声' =>
+          voice.gender == '女性' ||
+              voice.gender == '女声' ||
+              voice.gender == 'Female' ||
+              voice.tags.contains('女声') ||
+              voice.tags.contains('Female'),
+        '中文' =>
+          voice.language == '中文' ||
+              voice.tags.contains('中文') ||
+              voice.tags.contains('Chinese'),
+        '英文' =>
+          voice.language == 'English' ||
+              voice.tags.contains('English') ||
+              voice.tags.contains('英文'),
+        '收藏' => voice.favorite,
+        _ => true,
+      };
+    }).toList()..sort((a, b) {
+      final aTime = a.lastUsedAt;
+      final bTime = b.lastUsedAt;
+      if (aTime == null && bTime == null) return 0;
+      if (aTime == null) return 1;
+      if (bTime == null) return -1;
+      return bTime.compareTo(aTime);
+    });
   }
 }
 
 class _VoiceList extends StatelessWidget {
-  const _VoiceList({required this.appState, required this.voices});
+  const _VoiceList({
+    required this.appState,
+    required this.voices,
+    required this.playingVoiceId,
+    required this.onTogglePreview,
+  });
 
   final AppState appState;
   final List<Voice> voices;
+  final String? playingVoiceId;
+  final ValueChanged<Voice> onTogglePreview;
 
   @override
   Widget build(BuildContext context) {
     if (voices.isEmpty) {
-      return const Center(child: Text('暂无 AI 音色'));
+      return const EmptyState(
+        icon: HugeIcons.strokeRoundedVoiceId,
+        title: '暂无 AI 音色',
+        subtitle: '设计或克隆一个音色后会显示在这里。',
+      );
     }
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
       itemCount: voices.length,
       itemBuilder: (context, index) {
         final voice = voices[index];
         return VoiceCard(
           voice: voice,
           selected: appState.selectedVoice?.id == voice.id,
+          isPreviewing: playingVoiceId == voice.id,
           onUse: () => appState.selectVoice(voice.id),
-          onPreview: () {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('试听 ${voice.name}')));
-          },
+          onPreview: () => onTogglePreview(voice),
+          onFavorite: () => appState.toggleVoiceFavorite(voice.id),
           onDelete: voice.isUserCreated
               ? () => appState.deleteVoice(voice.id)
               : null,

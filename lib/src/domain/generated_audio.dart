@@ -7,6 +7,8 @@ class GeneratedAudio {
     required this.audioPath,
     required this.durationMs,
     required this.createdAt,
+    this.title,
+    this.favorite = false,
   });
 
   final String id;
@@ -16,4 +18,66 @@ class GeneratedAudio {
   final String audioPath;
   final int durationMs;
   final DateTime createdAt;
+  final String? title;
+  final bool favorite;
+
+  String get displayTitle {
+    final value = title?.trim();
+    if (value != null && value.isNotEmpty) return value;
+    return text;
+  }
+
+  GeneratedAudio copyWith({
+    String? id,
+    String? text,
+    String? voiceId,
+    String? voiceName,
+    String? audioPath,
+    int? durationMs,
+    DateTime? createdAt,
+    String? title,
+    bool? favorite,
+  }) {
+    return GeneratedAudio(
+      id: id ?? this.id,
+      text: text ?? this.text,
+      voiceId: voiceId ?? this.voiceId,
+      voiceName: voiceName ?? this.voiceName,
+      audioPath: audioPath ?? this.audioPath,
+      durationMs: durationMs ?? this.durationMs,
+      createdAt: createdAt ?? this.createdAt,
+      title: title ?? this.title,
+      favorite: favorite ?? this.favorite,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      'id': id,
+      'text': text,
+      'voiceId': voiceId,
+      'voiceName': voiceName,
+      'audioPath': audioPath,
+      'durationMs': durationMs,
+      'createdAt': createdAt.toIso8601String(),
+      'title': title,
+      'favorite': favorite,
+    };
+  }
+
+  factory GeneratedAudio.fromJson(Map<String, Object?> json) {
+    return GeneratedAudio(
+      id: json['id'] as String? ?? '',
+      text: json['text'] as String? ?? '',
+      voiceId: json['voiceId'] as String? ?? '',
+      voiceName: json['voiceName'] as String? ?? '',
+      audioPath: json['audioPath'] as String? ?? '',
+      durationMs: (json['durationMs'] as num?)?.round() ?? 0,
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      title: json['title'] as String?,
+      favorite: json['favorite'] as bool? ?? false,
+    );
+  }
 }

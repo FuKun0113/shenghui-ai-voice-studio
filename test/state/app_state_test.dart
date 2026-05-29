@@ -1,5 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:voice_clone_app/src/domain/draft_state.dart';
+import 'package:voice_clone_app/src/domain/generated_audio.dart';
+import 'package:voice_clone_app/src/domain/service_config.dart';
 import 'package:voice_clone_app/src/domain/voice.dart';
+import 'package:voice_clone_app/src/services/local_draft_store.dart';
+import 'package:voice_clone_app/src/services/local_history_store.dart';
+import 'package:voice_clone_app/src/services/local_json_store.dart';
+import 'package:voice_clone_app/src/services/local_voice_store.dart';
 import 'package:voice_clone_app/src/services/mock_mimo_service.dart';
 import 'package:voice_clone_app/src/state/app_state.dart';
 
@@ -14,6 +23,72 @@ void main() {
     expect(state.selectedVoice, isNotNull);
   });
 
+  test('loads all MiMo V2.5 built-in voices with tags', () {
+    final state = AppState(mimoService: MockMimoService());
+    final builtinVoices = state.voices
+        .where((voice) => voice.type == VoiceType.builtin)
+        .toList();
+
+    expect(builtinVoices, hasLength(9));
+    expect(
+      builtinVoices.map((voice) => voice.providerVoiceId),
+      containsAll(<String>[
+        'mimo_default',
+        '冰糖',
+        '茉莉',
+        '苏打',
+        '白桦',
+        'Mia',
+        'Chloe',
+        'Milo',
+        'Dean',
+      ]),
+    );
+    expect(builtinVoices.first.tags, isNotEmpty);
+    expect(
+      builtinVoices.every(
+        (voice) =>
+            voice.previewAudioPath?.startsWith('assets/audio/previews/') ??
+            false,
+      ),
+      isTrue,
+    );
+    for (final voice in builtinVoices) {
+      expect(File(voice.previewAudioPath!).existsSync(), isTrue);
+    }
+  });
+
+  test('updates direct MiMo API configuration', () {
+    final state = AppState(mimoService: MockMimoService());
+
+    state.updateServiceConfig(
+      const ServiceConfig.directApi(
+        apiUrl: 'https://api.xiaomimimo.com/v1/chat/completions',
+        apiKey: 'test-key',
+      ),
+    );
+
+    expect(state.serviceConfig.mode, ServiceMode.directApiKey);
+    expect(state.serviceConfig.apiUrl, contains('/v1/chat/completions'));
+    expect(state.serviceConfig.hasApiKey, isTrue);
+  });
+
+  test('can start with a saved MiMo API configuration', () {
+    final state = AppState(
+      mimoService: MockMimoService(),
+      serviceConfig: const ServiceConfig.directApi(
+        apiUrl: 'https://api.example.com/v1/chat/completions',
+        apiKey: 'saved-key',
+      ),
+    );
+
+    expect(
+      state.serviceConfig.apiUrl,
+      'https://api.example.com/v1/chat/completions',
+    );
+    expect(state.serviceConfig.apiKey, 'saved-key');
+  });
+
   test(
     'saving a designed voice stores reference audio and routes through clone',
     () async {
@@ -22,13 +97,30 @@ void main() {
       final voice = await state.designVoice(
         name: '温柔旁白',
         stylePrompt: '年轻女性，温柔，清晰',
+        gender: '女声',
       );
 
       expect(voice.type, VoiceType.designed);
       expect(voice.referenceAudioPath, contains('designed-voice'));
+      expect(voice.gender, '女声');
+      expect(voice.tags, contains('女声'));
       expect(state.voices.any((item) => item.id == voice.id), isTrue);
     },
   );
+
+  test('saving a cloned voice stores gender label as a tag', () async {
+    final state = AppState(mimoService: MockMimoService());
+
+    final voice = await state.saveClonedVoice(
+      name: '低沉男声',
+      referenceAudioPath: '/tmp/reference.wav',
+      gender: '男声',
+    );
+
+    expect(voice.type, VoiceType.cloned);
+    expect(voice.gender, '男声');
+    expect(voice.tags, contains('男声'));
+  });
 
   test('generated audio is appended to history', () async {
     final state = AppState(mimoService: MockMimoService());
@@ -39,4 +131,92 @@ void main() {
     expect(generated.text, '你好，欢迎使用 AI 语音工作台。');
     expect(state.history.single.id, generated.id);
   });
+
+  test('regenerates history audio with the original voice and text', () async {
+    final state = AppState(mimoService: MockMimoService());
+    state.updateDraftText('需要重生成的文本');
+
+    final generated = await state.generateCurrentVoice();
+    final regenerated = await state.regenerateAudio(generated);
+
+    expect(regenerated.text, generated.text);
+    expect(regenerated.voiceId, generated.voiceId);
+    expect(state.history, hasLength(2));
+    expect(state.history.first.id, regenerated.id);
+  });
+
+  test('loads persisted voices history and draft data', () async {
+    final jsonStore = MemoryJsonStore();
+    final voiceStore = LocalVoiceStore(jsonStore: jsonStore);
+    final historyStore = LocalHistoryStore(jsonStore: jsonStore);
+    final draftStore = LocalDraftStore(jsonStore: jsonStore);
+
+    await voiceStore.saveUserVoices(<Voice>[
+      Voice.cloned(
+        id: 'voice-custom',
+        name: '我的音色',
+        referenceAudioPath: '/tmp/ref.wav',
+        createdAt: DateTime(2026, 5, 29, 10),
+      ),
+    ]);
+    await historyStore.saveHistory(<GeneratedAudio>[
+      GeneratedAudio(
+        id: 'audio-1',
+        text: '历史文本',
+        voiceId: 'voice-custom',
+        voiceName: '我的音色',
+        audioPath: '/tmp/audio.wav',
+        durationMs: 1000,
+        createdAt: DateTime(2026, 5, 29, 11),
+      ),
+    ]);
+    await draftStore.save(
+      const DraftState(
+        text: '草稿',
+        stylePrompt: '温柔',
+        speed: 1.2,
+        emotion: '开心',
+        selectedVoiceId: 'voice-custom',
+      ),
+    );
+
+    final state = AppState(
+      mimoService: MockMimoService(),
+      voiceStore: voiceStore,
+      historyStore: historyStore,
+      draftStore: draftStore,
+    );
+    await state.loadLocalData();
+
+    expect(state.selectedVoice?.id, 'voice-custom');
+    expect(state.draftText, '草稿');
+    expect(state.stylePrompt, '温柔');
+    expect(state.speed, 1.2);
+    expect(state.emotion, '开心');
+    expect(state.history.single.id, 'audio-1');
+  });
+
+  test(
+    'generation persists history and marks selected voice as recently used',
+    () async {
+      final jsonStore = MemoryJsonStore();
+      final voiceStore = LocalVoiceStore(jsonStore: jsonStore);
+      final historyStore = LocalHistoryStore(jsonStore: jsonStore);
+      final state = AppState(
+        mimoService: MockMimoService(),
+        voiceStore: voiceStore,
+        historyStore: historyStore,
+        draftStore: LocalDraftStore(jsonStore: jsonStore),
+      );
+
+      state.updateDraftText('要生成的文本');
+      final audio = await state.generateCurrentVoice();
+
+      final persisted = await historyStore.loadHistory();
+      final reloadedVoices = await voiceStore.loadVoices();
+
+      expect(persisted.single.id, audio.id);
+      expect(reloadedVoices.first.lastUsedAt, isNotNull);
+    },
+  );
 }

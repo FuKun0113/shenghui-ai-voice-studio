@@ -7,6 +7,7 @@ void main() {
   testWidgets('app starts on generate screen', (tester) async {
     final state = AppState(mimoService: MockMimoService());
     await tester.pumpWidget(VoiceCloneApp(appState: state));
+    await tester.pumpAndSettle();
 
     expect(find.text('AI 语音工作台'), findsOneWidget);
     expect(find.text('输入文本'), findsOneWidget);

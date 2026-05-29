@@ -7,7 +7,7 @@ void main() {
     final voice = Voice.builtin(
       id: 'mimo-mia',
       name: 'Mia',
-      providerVoiceId: 'mimo_mia',
+      providerVoiceId: 'Mia',
     );
 
     final request = GenerationRequest.fromVoice(
@@ -20,7 +20,7 @@ void main() {
 
     expect(request.route, GenerationRoute.builtinTts);
     expect(request.referenceAudioPath, isNull);
-    expect(request.providerVoiceId, 'mimo_mia');
+    expect(request.providerVoiceId, 'Mia');
   });
 
   test('designed voice routes to voice clone with saved reference audio', () {

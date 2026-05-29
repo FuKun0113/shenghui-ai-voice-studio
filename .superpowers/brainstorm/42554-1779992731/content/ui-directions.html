@@ -1,0 +1,133 @@
+<h2>AI 语音工作台原型方向</h2>
+<p class="subtitle">你说得对，是原型图，不是圆形图。下面这版更接近真实产品界面：少装饰、重层级、重操作效率，尽量像一个已经成形的工具产品。</p>
+
+<div class="cards">
+  <div class="card" data-choice="workbench" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f4f5f3;border:1px solid #d8ddd7;border-radius:14px;height:340px;padding:12px;box-sizing:border-box;color:#17211d;font-family:Inter,system-ui;">
+        <div style="height:34px;border-radius:10px;background:#ffffff;border:1px solid #dfe4df;display:flex;align-items:center;justify-content:space-between;padding:0 12px;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:700;letter-spacing:.2px;">AI 语音工作台</div>
+          <div style="display:flex;gap:6px;">
+            <div style="width:10px;height:10px;background:#20322c;border-radius:2px;"></div>
+            <div style="width:10px;height:10px;background:#a7b5ac;border-radius:2px;"></div>
+            <div style="width:10px;height:10px;background:#d7ddd8;border-radius:2px;"></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:88px 1fr 118px;gap:10px;height:250px;">
+          <div style="background:#ffffff;border:1px solid #dfe4df;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;">
+            <div style="height:12px;width:52px;background:#d9dfda;border-radius:2px;"></div>
+            <div style="height:28px;background:#edf1ed;border-radius:6px;"></div>
+            <div style="height:28px;background:#edf1ed;border-radius:6px;"></div>
+            <div style="height:28px;background:#edf1ed;border-radius:6px;"></div>
+            <div style="flex:1;"></div>
+            <div style="height:24px;background:#2b3e37;border-radius:4px;"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="background:#ffffff;border:1px solid #dfe4df;border-radius:12px;padding:12px;">
+              <div style="height:10px;width:110px;background:#d9dfda;border-radius:2px;margin-bottom:10px;"></div>
+              <div style="height:66px;background:#f8f9f8;border:1px solid #ecefee;border-radius:8px;"></div>
+            </div>
+            <div style="background:#ffffff;border:1px solid #dfe4df;border-radius:12px;padding:12px;flex:1;">
+              <div style="height:10px;width:86px;background:#d9dfda;border-radius:2px;margin-bottom:10px;"></div>
+              <div style="height:86px;background:#f8f9f8;border:1px solid #ecefee;border-radius:8px;margin-bottom:10px;"></div>
+              <div style="display:flex;gap:8px;">
+                <div style="height:22px;width:54px;background:#eef2ee;border-radius:4px;"></div>
+                <div style="height:22px;width:54px;background:#eef2ee;border-radius:4px;"></div>
+                <div style="height:22px;width:54px;background:#eef2ee;border-radius:4px;"></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="background:#233730;color:white;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;">
+              <div style="height:9px;width:44px;background:rgba(255,255,255,.45);border-radius:2px;"></div>
+              <div style="height:56px;background:rgba(255,255,255,.08);border-radius:8px;"></div>
+              <div style="height:24px;background:#bddcc8;border-radius:4px;"></div>
+            </div>
+            <div style="background:#ffffff;border:1px solid #dfe4df;border-radius:12px;padding:10px;flex:1;">
+              <div style="height:9px;width:56px;background:#d9dfda;border-radius:2px;margin-bottom:8px;"></div>
+              <div style="height:54px;background:#f8f9f8;border:1px solid #ecefee;border-radius:8px;"></div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:10px;height:36px;background:#ffffff;border:1px solid #dfe4df;border-radius:10px;display:flex;align-items:center;padding:0 10px;gap:8px;">
+          <div style="width:28px;height:28px;background:#2b3e37;border-radius:4px;"></div>
+          <div style="flex:1;height:8px;background:#e2e7e2;border-radius:2px;"></div>
+          <div style="width:38px;height:22px;background:#eef2ee;border-radius:4px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. 工作台式原型</h3>
+      <p>最像成熟工具产品。左侧导航，中间编辑，右侧属性，底部播放/生成状态。它会把“工具感”立起来，不会像一堆圆角模块拼起来。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="focus-editor" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f7f8fa;border:1px solid #dbe0ea;border-radius:14px;height:340px;padding:12px;box-sizing:border-box;color:#162033;font-family:Inter,system-ui;">
+        <div style="height:34px;border-radius:10px;background:#ffffff;border:1px solid #e4e8ef;display:flex;align-items:center;justify-content:space-between;padding:0 12px;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:700;">生成语音</div>
+          <div style="height:20px;width:80px;background:#e8eef8;border-radius:4px;"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;height:250px;">
+          <div style="background:#ffffff;border:1px solid #e1e6ee;border-radius:12px;padding:12px;height:86px;">
+            <div style="height:8px;width:80px;background:#d2d8e3;border-radius:2px;margin-bottom:10px;"></div>
+            <div style="height:48px;background:#f7f8fb;border:1px solid #eef1f5;border-radius:8px;"></div>
+          </div>
+          <div style="background:#ffffff;border:1px solid #e1e6ee;border-radius:12px;padding:12px;flex:1;">
+            <div style="height:8px;width:74px;background:#d2d8e3;border-radius:2px;margin-bottom:10px;"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <div style="height:22px;width:56px;background:#eef2fb;border-radius:4px;"></div>
+              <div style="height:22px;width:56px;background:#f4efe4;border-radius:4px;"></div>
+              <div style="height:22px;width:56px;background:#edf4ed;border-radius:4px;"></div>
+              <div style="height:22px;width:56px;background:#f0edf5;border-radius:4px;"></div>
+            </div>
+            <div style="margin-top:10px;height:84px;background:#f7f8fb;border:1px solid #eef1f5;border-radius:8px;"></div>
+          </div>
+        </div>
+        <div style="margin-top:10px;height:46px;background:#1f4ce0;border-radius:10px;"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. 轻编辑器原型</h3>
+      <p>更适合手机。把界面压成一条主流程，减少侧边装饰，把主操作固定在底部。视觉更干净，也更像一个认真做过的单任务工具。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="brand-suite" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#fbfaf7;border:1px solid #e2ddd4;border-radius:14px;height:340px;padding:12px;box-sizing:border-box;color:#201e18;font-family:Inter,system-ui;">
+        <div style="height:58px;background:#1f1b16;border-radius:12px;margin-bottom:10px;padding:12px;color:white;">
+          <div style="height:8px;width:96px;background:rgba(255,255,255,.72);border-radius:2px;margin-bottom:10px;"></div>
+          <div style="height:20px;width:110px;background:#e6bf73;border-radius:4px;"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div style="height:72px;border:1px solid #e4ded1;border-radius:12px;background:white;"></div>
+          <div style="height:72px;border:1px solid #e4ded1;border-radius:12px;background:white;"></div>
+        </div>
+        <div style="background:white;border:1px solid #e4ded1;border-radius:12px;padding:10px;height:114px;">
+          <div style="height:62px;background:#f5f2eb;border-radius:8px;margin-bottom:8px;"></div>
+          <div style="display:flex;gap:6px;">
+            <div style="height:20px;width:52px;background:#efe7d9;border-radius:4px;"></div>
+            <div style="height:20px;width:52px;background:#e2ece8;border-radius:4px;"></div>
+            <div style="height:20px;width:52px;background:#e9e0ea;border-radius:4px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. 品牌工作室原型</h3>
+      <p>有一点品牌气质，适合做得更“高级”。但要控制住，不然会显得像展示页，而不是每天会用的生产工具。</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>我建议的方向</h3>
+  <p>优先选 A。它最适合把你的 App 从“圆润卡片集合”变成“真的像产品”的工作台：边界更明确，层级更清晰，按钮和信息区的关系也更像原型图。</p>
+</div>
+
+<div class="section">
+  <h3>明确的样式原则</h3>
+  <p>少用圆形图标块，改成窄圆角矩形；少浮动阴影，多用细边框和分割线；少把每块都做成“同样重要的卡片”；把主内容、辅助信息、动作区分开。</p>
+</div>

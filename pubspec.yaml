@@ -40,6 +40,17 @@ dependencies:
   record: ^6.1.2
   shared_preferences: ^2.5.4
   uuid: ^4.5.2
+  flex_color_scheme: ^8.4.0
+  material_symbols_icons: ^4.2928.1
+  flutter_animate: ^4.5.2
+  syncfusion_flutter_pdf: ^33.2.8
+  archive: ^4.0.9
+  xml: ^6.6.1
+  mime: ^2.0.0
+  share_plus: ^12.0.2
+  animations: ^2.2.0
+  just_waveform: ^0.0.7
+  hugeicons: ^1.1.7
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +67,8 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/audio/previews/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
