@@ -11,10 +11,15 @@ void main() {
       MaterialApp(home: VoiceLibraryScreen(appState: state)),
     );
 
-    expect(find.text('9 个默认音色 · 0 个 AI 音色'), findsOneWidget);
+    expect(find.text('9 个官方音色 · 0 个自定义音色'), findsOneWidget);
     expect(find.text('MiMo-默认'), findsOneWidget);
     expect(find.text('冰糖'), findsWidgets);
     expect(find.text('官方预置'), findsWidgets);
+    expect(find.text('自定义'), findsOneWidget);
+    expect(find.text('AI 音色'), findsNothing);
+    expect(find.widgetWithText(FilterChip, '中文'), findsNothing);
+    expect(find.widgetWithText(FilterChip, '英文'), findsNothing);
+    expect(find.text('收藏'), findsNothing);
   });
 
   testWidgets('design voice saves an AI voice', (tester) async {
@@ -43,7 +48,7 @@ void main() {
 
     expect(state.voices.any((voice) => voice.name == '温柔旁白'), isTrue);
 
-    await tester.tap(find.text('AI 音色'));
+    await tester.tap(find.text('自定义'));
     await tester.pumpAndSettle();
 
     expect(find.text('温柔旁白'), findsOneWidget);
@@ -90,6 +95,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('苏打'), findsOneWidget);
+  });
+
+  testWidgets('custom filter shows a custom voice empty state', (tester) async {
+    final state = AppState(mimoService: MockMimoService());
+    await tester.pumpWidget(
+      MaterialApp(home: VoiceLibraryScreen(appState: state)),
+    );
+
+    await tester.tap(find.text('自定义'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('暂无自定义音色'), findsOneWidget);
+    expect(find.text('暂无 AI 音色'), findsNothing);
   });
 
   testWidgets('can favorite a voice', (tester) async {

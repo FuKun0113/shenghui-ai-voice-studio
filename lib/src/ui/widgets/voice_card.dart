@@ -50,13 +50,6 @@ class VoiceCard extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: <Widget>[
-            IconBadge(
-              icon: selected
-                  ? HugeIcons.strokeRoundedCheckmarkCircle02
-                  : _iconForType(voice.type),
-              selected: selected,
-            ),
-            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,11 +98,18 @@ class VoiceCard extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: '使用',
+                  tooltip: selected ? '当前使用' : '使用',
                   onPressed: onUse,
-                  icon: const AppHugeIcon(
-                    HugeIcons.strokeRoundedCheckmarkCircle02,
-                  ),
+                  icon: selected
+                      ? Icon(
+                          Icons.check_circle,
+                          color: scheme.primary,
+                          size: 24,
+                        )
+                      : AppHugeIcon(
+                          HugeIcons.strokeRoundedCheckmarkCircle02,
+                          color: scheme.onSurfaceVariant,
+                        ),
                 ),
                 if (onDelete != null)
                   IconButton(
@@ -123,14 +123,6 @@ class VoiceCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  List<List<dynamic>> _iconForType(VoiceType type) {
-    return switch (type) {
-      VoiceType.builtin => HugeIcons.strokeRoundedVoice,
-      VoiceType.cloned => HugeIcons.strokeRoundedMic01,
-      VoiceType.designed => HugeIcons.strokeRoundedMagicWand02,
-    };
   }
 
   String _labelForType(VoiceType type) {

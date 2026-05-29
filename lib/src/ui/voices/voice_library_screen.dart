@@ -19,16 +19,7 @@ class VoiceLibraryScreen extends StatefulWidget {
 }
 
 class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
-  static const List<String> _filters = <String>[
-    '全部',
-    '官方',
-    'AI 音色',
-    '男声',
-    '女声',
-    '中文',
-    '英文',
-    '收藏',
-  ];
+  static const List<String> _filters = <String>['全部', '官方', '自定义', '男声', '女声'];
 
   final TextEditingController _searchController = TextEditingController();
   String _filter = '全部';
@@ -150,7 +141,7 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${builtinVoices.length} 个默认音色 · ${aiVoices.length} 个 AI 音色',
+                          '${builtinVoices.length} 个官方音色 · ${aiVoices.length} 个自定义音色',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 color: Theme.of(
@@ -208,6 +199,10 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
               appState: widget.appState,
               voices: visibleVoices,
               playingVoiceId: _playingVoiceId,
+              emptyTitle: _filter == '自定义' ? '暂无自定义音色' : '暂无匹配音色',
+              emptySubtitle: _filter == '自定义'
+                  ? '设计或克隆一个音色后会显示在这里。'
+                  : '换个关键词或分类试试。',
               onTogglePreview: _togglePreview,
             ),
           ),
@@ -233,7 +228,7 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
       if (query.isNotEmpty && !haystack.contains(query)) return false;
       return switch (_filter) {
         '官方' => voice.type == VoiceType.builtin,
-        'AI 音色' => voice.type != VoiceType.builtin,
+        '自定义' => voice.type != VoiceType.builtin,
         '男声' =>
           voice.gender == '男性' ||
               voice.gender == '男声' ||
@@ -246,15 +241,6 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
               voice.gender == 'Female' ||
               voice.tags.contains('女声') ||
               voice.tags.contains('Female'),
-        '中文' =>
-          voice.language == '中文' ||
-              voice.tags.contains('中文') ||
-              voice.tags.contains('Chinese'),
-        '英文' =>
-          voice.language == 'English' ||
-              voice.tags.contains('English') ||
-              voice.tags.contains('英文'),
-        '收藏' => voice.favorite,
         _ => true,
       };
     }).toList()..sort((a, b) {
@@ -278,21 +264,25 @@ class _VoiceList extends StatelessWidget {
     required this.appState,
     required this.voices,
     required this.playingVoiceId,
+    required this.emptyTitle,
+    required this.emptySubtitle,
     required this.onTogglePreview,
   });
 
   final AppState appState;
   final List<Voice> voices;
   final String? playingVoiceId;
+  final String emptyTitle;
+  final String emptySubtitle;
   final ValueChanged<Voice> onTogglePreview;
 
   @override
   Widget build(BuildContext context) {
     if (voices.isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         icon: HugeIcons.strokeRoundedVoiceId,
-        title: '暂无 AI 音色',
-        subtitle: '设计或克隆一个音色后会显示在这里。',
+        title: emptyTitle,
+        subtitle: emptySubtitle,
       );
     }
     return ListView.builder(

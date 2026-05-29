@@ -176,6 +176,17 @@ class _GenerateScreenState extends State<GenerateScreen> {
     );
   }
 
+  Future<void> _openDraftFullscreenEditor() async {
+    final value = await _openFullscreenTextEditor(
+      context,
+      title: '全屏编辑输入文本',
+      initialText: _textController.text,
+      hintText: '输入要生成语音的文本，长文也可以在这里集中编辑。',
+    );
+    if (value == null || !mounted) return;
+    _updateDraftText(value);
+  }
+
   Future<void> _generate() async {
     if (!widget.appState.serviceConfig.hasApiKey) {
       setState(() {
@@ -458,36 +469,55 @@ class _GenerateScreenState extends State<GenerateScreen> {
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              TextField(
-                                key: const Key('draftTextField'),
-                                controller: _textController,
-                                minLines: 6,
-                                maxLines: 10,
-                                decoration: const InputDecoration(
-                                  labelText: '输入文本',
-                                  hintText: '例如：欢迎使用 AI 语音工作台。',
-                                ),
-                                onChanged: (value) {
-                                  widget.appState.updateDraftText(value);
-                                  setState(() {});
-                                },
-                                contextMenuBuilder: (context, editableTextState) {
-                                  final items = <ContextMenuButtonItem>[
-                                    ContextMenuButtonItem(
-                                      label: '插入标签',
-                                      onPressed: () {
-                                        ContextMenuController.removeAny();
-                                        unawaited(_openTagInsertSheet());
-                                      },
+                              Stack(
+                                children: <Widget>[
+                                  TextField(
+                                    key: const Key('draftTextField'),
+                                    controller: _textController,
+                                    minLines: 6,
+                                    maxLines: 10,
+                                    decoration: const InputDecoration(
+                                      labelText: '输入文本',
+                                      hintText: '例如：欢迎使用 AI 语音工作台。',
+                                      contentPadding: EdgeInsets.fromLTRB(
+                                        16,
+                                        18,
+                                        56,
+                                        58,
+                                      ),
                                     ),
-                                    ...editableTextState.contextMenuButtonItems,
-                                  ];
-                                  return AdaptiveTextSelectionToolbar.buttonItems(
-                                    anchors:
-                                        editableTextState.contextMenuAnchors,
-                                    buttonItems: items,
-                                  );
-                                },
+                                    onChanged: (value) {
+                                      widget.appState.updateDraftText(value);
+                                      setState(() {});
+                                    },
+                                    contextMenuBuilder: (context, editableTextState) {
+                                      final items = <ContextMenuButtonItem>[
+                                        ContextMenuButtonItem(
+                                          label: '插入标签',
+                                          onPressed: () {
+                                            ContextMenuController.removeAny();
+                                            unawaited(_openTagInsertSheet());
+                                          },
+                                        ),
+                                        ...editableTextState
+                                            .contextMenuButtonItems,
+                                      ];
+                                      return AdaptiveTextSelectionToolbar.buttonItems(
+                                        anchors: editableTextState
+                                            .contextMenuAnchors,
+                                        buttonItems: items,
+                                      );
+                                    },
+                                  ),
+                                  Positioned(
+                                    right: 8,
+                                    bottom: 8,
+                                    child: _FullscreenEditButton(
+                                      tooltip: '全屏编辑输入文本',
+                                      onPressed: _openDraftFullscreenEditor,
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 12),
                               AppPanel(
@@ -653,6 +683,110 @@ class _MimoTaggedTextEditingController extends TextEditingController {
   }
 }
 
+Future<String?> _openFullscreenTextEditor(
+  BuildContext context, {
+  required String title,
+  required String initialText,
+  required String hintText,
+}) {
+  return Navigator.of(context).push<String>(
+    MaterialPageRoute<String>(
+      fullscreenDialog: true,
+      builder: (context) => _FullscreenTextEditorPage(
+        title: title,
+        initialText: initialText,
+        hintText: hintText,
+      ),
+    ),
+  );
+}
+
+class _FullscreenTextEditorPage extends StatefulWidget {
+  const _FullscreenTextEditorPage({
+    required this.title,
+    required this.initialText,
+    required this.hintText,
+  });
+
+  final String title;
+  final String initialText;
+  final String hintText;
+
+  @override
+  State<_FullscreenTextEditorPage> createState() =>
+      _FullscreenTextEditorPageState();
+}
+
+class _FullscreenTextEditorPageState extends State<_FullscreenTextEditorPage> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialText,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_controller.text),
+            child: const Text('完成'),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: TextField(
+            key: const Key('fullscreenTextEditorField'),
+            controller: _controller,
+            autofocus: true,
+            expands: true,
+            minLines: null,
+            maxLines: null,
+            textAlignVertical: TextAlignVertical.top,
+            decoration: InputDecoration(hintText: widget.hintText),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FullscreenEditButton extends StatelessWidget {
+  const _FullscreenEditButton({required this.tooltip, required this.onPressed});
+
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox.square(
+      dimension: 38,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        style: IconButton.styleFrom(
+          backgroundColor: scheme.surface.withValues(alpha: 0.86),
+          foregroundColor: scheme.primary,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        icon: const AppHugeIcon(
+          HugeIcons.strokeRoundedMaximizeScreen,
+          size: 18,
+        ),
+      ),
+    );
+  }
+}
+
 class _InstructField extends StatefulWidget {
   const _InstructField({required this.controller, required this.onChanged});
 
@@ -704,6 +838,22 @@ class _InstructFieldState extends State<_InstructField> {
     setState(() => _expanded = false);
   }
 
+  Future<void> _openFullscreenEditor() async {
+    final value = await _openFullscreenTextEditor(
+      context,
+      title: '全屏编辑表演指令',
+      initialText: widget.controller.text,
+      hintText: '例如：整体自然亲切，像熟人当面提醒，语气不要太夸张。',
+    );
+    if (value == null || !mounted) return;
+    widget.controller.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
+    );
+    widget.onChanged(value);
+    setState(() => _expanded = true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -743,19 +893,32 @@ class _InstructFieldState extends State<_InstructField> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  TextField(
-                    key: const Key('instructTextField'),
-                    controller: widget.controller,
-                    focusNode: _focusNode,
-                    minLines: 2,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      hintText: '例如：整体自然亲切，像熟人当面提醒，语气不要太夸张。',
-                      prefixIcon: AppPrefixIcon(
-                        HugeIcons.strokeRoundedMagicWand02,
+                  Stack(
+                    children: <Widget>[
+                      TextField(
+                        key: const Key('instructTextField'),
+                        controller: widget.controller,
+                        focusNode: _focusNode,
+                        minLines: 2,
+                        maxLines: 4,
+                        decoration: const InputDecoration(
+                          hintText: '例如：整体自然亲切，像熟人当面提醒，语气不要太夸张。',
+                          prefixIcon: AppPrefixIcon(
+                            HugeIcons.strokeRoundedMagicWand02,
+                          ),
+                          contentPadding: EdgeInsets.fromLTRB(16, 18, 56, 58),
+                        ),
+                        onChanged: widget.onChanged,
                       ),
-                    ),
-                    onChanged: widget.onChanged,
+                      Positioned(
+                        right: 8,
+                        bottom: 8,
+                        child: _FullscreenEditButton(
+                          tooltip: '全屏编辑表演指令',
+                          onPressed: _openFullscreenEditor,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               )

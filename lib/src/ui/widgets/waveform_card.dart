@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:just_waveform/just_waveform.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../services/waveform_cache_store.dart';
 
@@ -58,15 +62,14 @@ class _WaveformCardState extends State<WaveformCard> {
   }
 
   Future<void> _loadWaveform() async {
+    final sourcePath = widget.audioPath;
     try {
-      final audioFile = File(widget.audioPath);
-      if (!await audioFile.exists()) return;
-      final waveformFile = await _cacheStore.cacheFileForAudio(
-        widget.audioPath,
-      );
+      final audioFile = await _audioFileForPath(sourcePath);
+      if (audioFile == null) return;
+      final waveformFile = await _cacheStore.cacheFileForAudio(sourcePath);
       if (await waveformFile.exists()) {
         final waveform = await JustWaveform.parse(waveformFile);
-        if (!mounted || widget.audioPath != audioFile.path) return;
+        if (!mounted || widget.audioPath != sourcePath) return;
         setState(() => _waveform = waveform);
         return;
       }
@@ -77,6 +80,7 @@ class _WaveformCardState extends State<WaveformCard> {
           ).listen(
             (progress) {
               if (!mounted) return;
+              if (widget.audioPath != sourcePath) return;
               if (progress.waveform != null) {
                 setState(() => _waveform = progress.waveform);
               }
@@ -88,6 +92,30 @@ class _WaveformCardState extends State<WaveformCard> {
     } on Object {
       // Fallback to decorative bars.
     }
+  }
+
+  Future<File?> _audioFileForPath(String audioPath) async {
+    if (!audioPath.startsWith('assets/')) {
+      final audioFile = File(audioPath);
+      return await audioFile.exists() ? audioFile : null;
+    }
+
+    final directory = await getApplicationSupportDirectory();
+    final assetCacheDir = Directory(p.join(directory.path, 'waveform_assets'));
+    if (!await assetCacheDir.exists()) {
+      await assetCacheDir.create(recursive: true);
+    }
+    final safeName = base64Url.encode(utf8.encode(audioPath));
+    final extension = p.extension(audioPath);
+    final audioFile = File(p.join(assetCacheDir.path, '$safeName$extension'));
+    if (await audioFile.exists()) return audioFile;
+
+    final data = await rootBundle.load(audioPath);
+    await audioFile.writeAsBytes(
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      flush: true,
+    );
+    return audioFile;
   }
 
   @override

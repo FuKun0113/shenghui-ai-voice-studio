@@ -275,6 +275,7 @@ class _GeneratedAudioDetailScreenState
                 text: _audio.stylePrompt,
                 emptyText: '未填写表演指令',
                 maxHeight: 180,
+                collapsible: true,
               ),
               const SizedBox(height: 14),
               CopyableTaggedTextBlock(

@@ -96,6 +96,50 @@ void main() {
     expect(find.text('生成全部'), findsOneWidget);
   });
 
+  testWidgets('draft and instruct fields can open fullscreen editors', (
+    tester,
+  ) async {
+    final state = AppState(mimoService: MockMimoService());
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: GenerateScreen(appState: state)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byTooltip('全屏编辑输入文本'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('全屏编辑输入文本'));
+    await tester.pumpAndSettle();
+    expect(find.text('全屏编辑输入文本'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('fullscreenTextEditorField')),
+      '全屏输入后的正文',
+    );
+    await tester.tap(find.text('完成'));
+    await tester.pumpAndSettle();
+
+    expect(state.draftText, '全屏输入后的正文');
+
+    await tester.ensureVisible(find.text('表演指令 / Instruct'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('表演指令 / Instruct'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('全屏编辑表演指令'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('全屏编辑表演指令'));
+    await tester.pumpAndSettle();
+    expect(find.text('全屏编辑表演指令'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('fullscreenTextEditorField')),
+      '全屏输入后的表演指令',
+    );
+    await tester.tap(find.text('完成'));
+    await tester.pumpAndSettle();
+
+    expect(state.stylePrompt, '全屏输入后的表演指令');
+  });
+
   testWidgets('tag insert sheet inserts repeatable style and audio tags', (
     tester,
   ) async {

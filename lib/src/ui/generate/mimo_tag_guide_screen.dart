@@ -379,6 +379,7 @@ class _MimoExampleDetailScreenState extends State<MimoExampleDetailScreen> {
                 title: '表演指令',
                 text: widget.example.stylePrompt,
                 maxHeight: 180,
+                collapsible: true,
               ),
               const SizedBox(height: 12),
               CopyableTaggedTextBlock(

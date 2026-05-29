@@ -71,25 +71,48 @@ class MimoTaggedText extends StatelessWidget {
   }
 }
 
-class CopyableTaggedTextBlock extends StatelessWidget {
+class CopyableTaggedTextBlock extends StatefulWidget {
   const CopyableTaggedTextBlock({
     super.key,
     required this.title,
     required this.text,
     this.emptyText = '暂无内容',
     this.maxHeight,
+    this.collapsible = false,
   });
 
   final String title;
   final String? text;
   final String emptyText;
   final double? maxHeight;
+  final bool collapsible;
+
+  @override
+  State<CopyableTaggedTextBlock> createState() =>
+      _CopyableTaggedTextBlockState();
+}
+
+class _CopyableTaggedTextBlockState extends State<CopyableTaggedTextBlock> {
+  bool _expanded = false;
+
+  void _copy(String displayText) {
+    Clipboard.setData(ClipboardData(text: displayText));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${widget.title}已复制')));
+  }
+
+  void _toggleExpanded() {
+    setState(() => _expanded = !_expanded);
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final value = text?.trim();
-    final displayText = value == null || value.isEmpty ? emptyText : value;
+    final value = widget.text?.trim();
+    final displayText = value == null || value.isEmpty
+        ? widget.emptyText
+        : value;
     final content = DecoratedBox(
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
@@ -101,11 +124,63 @@ class CopyableTaggedTextBlock extends StatelessWidget {
           child: MimoTaggedText(
             displayText,
             selectable: true,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.72),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(height: 1.72),
           ),
         ),
       ),
     );
+    if (widget.collapsible && !_expanded) {
+      return AppPanel(
+        padding: const EdgeInsets.all(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: _toggleExpanded,
+          child: Row(
+            children: <Widget>[
+              AppHugeIcon(
+                HugeIcons.strokeRoundedMagicWand02,
+                size: 20,
+                color: scheme.primary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      widget.title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    MimoTaggedText(
+                      displayText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: value == null || value.isEmpty
+                            ? scheme.onSurfaceVariant
+                            : scheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              IconButton(
+                tooltip: '复制${widget.title}',
+                onPressed: () => _copy(displayText),
+                icon: const AppHugeIcon(HugeIcons.strokeRoundedCopy01),
+              ),
+              TextButton(onPressed: _toggleExpanded, child: const Text('展开')),
+            ],
+          ),
+        ),
+      );
+    }
     return AppPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -114,30 +189,27 @@ class CopyableTaggedTextBlock extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  title,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                  widget.title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               IconButton(
-                tooltip: '复制$title',
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: displayText));
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('$title已复制')));
-                },
+                tooltip: '复制${widget.title}',
+                onPressed: () => _copy(displayText),
                 icon: const AppHugeIcon(HugeIcons.strokeRoundedCopy01),
               ),
+              if (widget.collapsible)
+                TextButton(onPressed: _toggleExpanded, child: const Text('收起')),
             ],
           ),
           const SizedBox(height: 10),
-          if (maxHeight == null)
+          if (widget.maxHeight == null)
             content
           else
             ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxHeight!),
+              constraints: BoxConstraints(maxHeight: widget.maxHeight!),
               child: content,
             ),
         ],
