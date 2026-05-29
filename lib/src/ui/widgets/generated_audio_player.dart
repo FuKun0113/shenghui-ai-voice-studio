@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../domain/generated_audio.dart';
+import 'mimo_tagged_text.dart';
 import 'waveform_card.dart';
 
 class GeneratedAudioCapsule extends StatelessWidget {
@@ -62,7 +63,7 @@ class GeneratedAudioCapsule extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
+                      MimoTaggedText(
                         audio.displayTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -95,7 +96,7 @@ class GeneratedAudioCapsule extends StatelessWidget {
                       ),
                       if (showTextPreview) ...<Widget>[
                         const SizedBox(height: 8),
-                        Text(
+                        MimoTaggedText(
                           audio.text,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -191,9 +192,9 @@ class LargeGeneratedAudioPlayer extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    MimoTaggedText(
                       audio.displayTitle,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w900,

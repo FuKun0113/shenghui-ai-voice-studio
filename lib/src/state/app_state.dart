@@ -201,12 +201,19 @@ class AppState extends ChangeNotifier {
     if (voice == null) {
       throw StateError('原音色已不存在，请重新选择音色');
     }
-    return _generateTextWithVoice(text: audio.text, voice: voice);
+    return _generateTextWithVoice(
+      text: audio.text,
+      voice: voice,
+      stylePromptOverride: audio.stylePrompt ?? _stylePrompt,
+      title: audio.title,
+    );
   }
 
   Future<GeneratedAudio> _generateTextWithVoice({
     required String text,
     required Voice voice,
+    String? stylePromptOverride,
+    String? title,
   }) async {
     final normalizedText = text.trim();
     if (normalizedText.isEmpty) {
@@ -220,12 +227,12 @@ class AppState extends ChangeNotifier {
         voice: voice,
         speed: 1.0,
         emotion: _emotion,
-        stylePrompt: _stylePrompt,
+        stylePrompt: stylePromptOverride ?? _stylePrompt,
       );
-      final generated = await mimoService.generateSpeech(
+      final generated = (await mimoService.generateSpeech(
         request: request,
         config: _serviceConfig,
-      );
+      )).copyWith(title: title);
       _history.insert(0, generated);
       unawaited(_historyStore.saveHistory(_history));
       _markVoiceRecentlyUsed(voice.id);

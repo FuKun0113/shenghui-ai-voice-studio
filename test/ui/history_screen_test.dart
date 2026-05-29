@@ -74,6 +74,7 @@ void main() {
     tester,
   ) async {
     final state = AppState(mimoService: MockMimoService());
+    state.updateStylePrompt('整体自然亲切，像熟人当面提醒。');
     state.updateDraftText('历史操作测试文本');
     final generatedFuture = state.generateCurrentVoice();
     await tester.pump(const Duration(milliseconds: 200));
@@ -95,8 +96,20 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('生成文本'), findsOneWidget);
+    expect(find.text('音色'), findsOneWidget);
+    expect(find.text('表演指令'), findsOneWidget);
+    expect(find.textContaining('整体自然亲切'), findsOneWidget);
     expect(find.text('历史操作测试文本'), findsWidgets);
     expect(find.byTooltip('播放'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('命名语音'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('audioTitleField')), '我的历史语音');
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(state.history.single.title, '我的历史语音');
+    expect(find.text('我的历史语音'), findsOneWidget);
   });
 
   testWidgets('history item can regenerate audio from the capsule action', (

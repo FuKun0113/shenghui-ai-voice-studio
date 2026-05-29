@@ -27,8 +27,11 @@ void main() {
     expect(find.byKey(const Key('voiceSelectorField')), findsOneWidget);
     expect(find.byType(DropdownButtonFormField<String>), findsNothing);
     expect(find.text('上传文档'), findsOneWidget);
-    expect(find.text('温柔'), findsOneWidget);
-    expect(find.text('粤语'), findsOneWidget);
+    expect(find.text('插入标签'), findsOneWidget);
+    expect(find.text('表演指令 / Instruct'), findsOneWidget);
+    expect(find.text('温柔'), findsNothing);
+    expect(find.text('粤语'), findsNothing);
+    expect(find.text('四川话'), findsNothing);
 
     await tester.enterText(find.byType(TextField).first, '欢迎使用 AI 语音工作台。');
     await tester.tap(find.text('生成语音'));
@@ -91,6 +94,77 @@ void main() {
 
     expect(find.textContaining('已分为'), findsOneWidget);
     expect(find.text('生成全部'), findsOneWidget);
+  });
+
+  testWidgets('tag insert sheet inserts repeatable style and audio tags', (
+    tester,
+  ) async {
+    final state = AppState(mimoService: MockMimoService());
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: GenerateScreen(appState: state)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final draftField = find.byKey(const Key('draftTextField'));
+    await tester.enterText(draftField, '欢迎使用 AI 语音工作台。');
+    await tester.tap(find.text('插入标签'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('粤语'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('插入标签'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('粤语'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('插入标签'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('轻笑'));
+    await tester.pumpAndSettle();
+
+    final textField = tester.widget<TextField>(draftField);
+    expect(textField.controller?.text, '(粤语 粤语)欢迎使用 AI 语音工作台。[轻笑]');
+    expect(state.draftText, '(粤语 粤语)欢迎使用 AI 语音工作台。[轻笑]');
+  });
+
+  testWidgets('tag guide opens and applies an advanced example', (
+    tester,
+  ) async {
+    final state = AppState(mimoService: MockMimoService());
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: GenerateScreen(appState: state)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('高级案例'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(AppBar, 'MiMo 标签与案例'), findsOneWidget);
+    expect(find.text('风格标签'), findsOneWidget);
+    expect(find.text('音频标签'), findsOneWidget);
+    expect(find.text('沧桑老前辈叙事'), findsOneWidget);
+    expect(find.text('基础情绪'), findsNothing);
+
+    await tester.tap(find.text('沧桑老前辈叙事'));
+    await tester.pumpAndSettle();
+    expect(find.text('案例详情'), findsOneWidget);
+    expect(find.text('删除'), findsNothing);
+    expect(find.text('重生成'), findsNothing);
+    expect(find.text('套用文本'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const Key('useMimoExample-0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('useMimoExample-0')));
+    await tester.pumpAndSettle();
+
+    final textField = tester.widget<TextField>(
+      find.byKey(const Key('draftTextField')),
+    );
+    expect(textField.controller?.text, contains('街口那个老周'));
+    expect(state.stylePrompt, contains('声音低沉沙哑'));
+    expect(state.draftText, textField.controller?.text);
   });
 }
 

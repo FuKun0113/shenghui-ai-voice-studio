@@ -9,6 +9,7 @@ import '../../services/audio_playback_service.dart';
 import '../../state/app_state.dart';
 import '../widgets/app_panel.dart';
 import '../widgets/generated_audio_player.dart';
+import '../widgets/mimo_tagged_text.dart';
 
 class GeneratedAudioDetailScreen extends StatefulWidget {
   const GeneratedAudioDetailScreen({
@@ -113,6 +114,19 @@ class _GeneratedAudioDetailScreenState
     }
   }
 
+  Future<void> _rename() async {
+    final title = await showDialog<String>(
+      context: context,
+      builder: (context) =>
+          _RenameAudioDialog(initialTitle: _audio.title ?? ''),
+    );
+    if (title == null || !mounted) return;
+    final renamed = _audio.copyWith(title: title.trim());
+    widget.appState.renameHistoryItem(_audio.id, title);
+    setState(() => _audio = renamed);
+    widget.onAudioChanged?.call(renamed);
+  }
+
   Future<void> _delete() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -156,10 +170,22 @@ class _GeneratedAudioDetailScreenState
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final voice = widget.appState.voices
+        .where((voice) => voice.id == _audio.voiceId)
+        .firstOrNull;
     return Scaffold(
-      appBar: AppBar(title: const Text('语音详情')),
+      appBar: AppBar(
+        title: const Text('语音详情'),
+        actions: <Widget>[
+          IconButton(
+            tooltip: '命名语音',
+            onPressed: _rename,
+            icon: const AppHugeIcon(HugeIcons.strokeRoundedEdit02),
+          ),
+        ],
+      ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -200,48 +226,113 @@ class _GeneratedAudioDetailScreenState
                 ],
               ),
               const SizedBox(height: 14),
-              Expanded(
-                child: AppPanel(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Text(
-                        '生成文本',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 10),
-                      Expanded(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: scheme.surfaceContainerHighest.withValues(
-                              alpha: 0.45,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: SingleChildScrollView(
-                              child: SelectionArea(
-                                child: Text(
-                                  _audio.text,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodyLarge?.copyWith(height: 1.72),
-                                ),
+              AppPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const SectionHeader(title: '音色'),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: <Widget>[
+                        IconBadge(
+                          icon: voice?.isUserCreated == true
+                              ? HugeIcons.strokeRoundedMic01
+                              : HugeIcons.strokeRoundedVoice,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                _audio.voiceName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w900),
                               ),
-                            ),
+                              const SizedBox(height: 4),
+                              Text(
+                                voice == null
+                                    ? '原音色信息不可用'
+                                    : voice.tags.take(4).join(' · '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: scheme.onSurfaceVariant),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
+              ),
+              const SizedBox(height: 14),
+              CopyableTaggedTextBlock(
+                title: '表演指令',
+                text: _audio.stylePrompt,
+                emptyText: '未填写表演指令',
+                maxHeight: 180,
+              ),
+              const SizedBox(height: 14),
+              CopyableTaggedTextBlock(
+                title: '生成文本',
+                text: _audio.text,
+                maxHeight: 320,
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _RenameAudioDialog extends StatefulWidget {
+  const _RenameAudioDialog({required this.initialTitle});
+
+  final String initialTitle;
+
+  @override
+  State<_RenameAudioDialog> createState() => _RenameAudioDialogState();
+}
+
+class _RenameAudioDialogState extends State<_RenameAudioDialog> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialTitle,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('命名语音'),
+      content: TextField(
+        key: const Key('audioTitleField'),
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(
+          labelText: '语音名称',
+          hintText: '留空则使用生成文本作为名称',
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: const Text('保存'),
+        ),
+      ],
     );
   }
 }

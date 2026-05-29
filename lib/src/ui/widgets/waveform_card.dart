@@ -137,7 +137,7 @@ class _WaveformCardState extends State<WaveformCard> {
               Positioned.fill(
                 child: Opacity(
                   opacity: widget.highlighted ? 0.68 : 0.48,
-                  child: _waveform == null
+                  child: _waveform == null || _waveform!.length <= 0
                       ? _FallbackWaveLines(
                           color: scheme.primary,
                           accentColor: scheme.tertiary,

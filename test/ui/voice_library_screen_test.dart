@@ -36,8 +36,12 @@ void main() {
       find.byKey(const Key('stylePromptField')),
       '年轻女性，温柔，清晰',
     );
+    await tester.ensureVisible(find.text('生成并保存'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('生成并保存'));
     await tester.pumpAndSettle();
+
+    expect(state.voices.any((voice) => voice.name == '温柔旁白'), isTrue);
 
     await tester.tap(find.text('AI 音色'));
     await tester.pumpAndSettle();

@@ -125,22 +125,27 @@ void main() {
   test('generated audio is appended to history', () async {
     final state = AppState(mimoService: MockMimoService());
     state.updateDraftText('你好，欢迎使用 AI 语音工作台。');
+    state.updateStylePrompt('像熟人当面提醒');
 
     final generated = await state.generateCurrentVoice();
 
     expect(generated.text, '你好，欢迎使用 AI 语音工作台。');
+    expect(generated.stylePrompt, '像熟人当面提醒');
     expect(state.history.single.id, generated.id);
   });
 
-  test('regenerates history audio with the original voice and text', () async {
+  test('regenerates history audio with original voice text and instruct', () async {
     final state = AppState(mimoService: MockMimoService());
     state.updateDraftText('需要重生成的文本');
+    state.updateStylePrompt('原始表演指令');
 
     final generated = await state.generateCurrentVoice();
+    state.updateStylePrompt('当前页面新指令');
     final regenerated = await state.regenerateAudio(generated);
 
     expect(regenerated.text, generated.text);
     expect(regenerated.voiceId, generated.voiceId);
+    expect(regenerated.stylePrompt, '原始表演指令');
     expect(state.history, hasLength(2));
     expect(state.history.first.id, regenerated.id);
   });

@@ -180,6 +180,7 @@ class AudioPlaybackService implements AudioPlaybackController {
   void _handleEngineState(AudioEngineState state) {
     final current = _playbackState.value;
     if (state.completed) {
+      unawaited(_player.stop());
       _playbackState.value = current.copyWith(
         isPlaying: false,
         position: current.duration ?? current.position,

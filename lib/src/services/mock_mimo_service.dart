@@ -47,6 +47,7 @@ class MockMimoService implements MimoService {
       audioPath: '/mock/audio/generated-$stamp.wav',
       durationMs: 3200,
       createdAt: DateTime.now(),
+      stylePrompt: request.stylePrompt,
     );
   }
 }

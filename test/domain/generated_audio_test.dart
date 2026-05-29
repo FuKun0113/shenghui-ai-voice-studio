@@ -12,12 +12,14 @@ void main() {
       durationMs: 3200,
       createdAt: DateTime(2026, 5, 29, 10),
       title: '欢迎词',
+      stylePrompt: '温柔讲述',
       favorite: true,
     );
 
     final restored = GeneratedAudio.fromJson(audio.toJson());
 
     expect(restored.title, '欢迎词');
+    expect(restored.stylePrompt, '温柔讲述');
     expect(restored.favorite, isTrue);
     expect(restored.createdAt, DateTime(2026, 5, 29, 10));
   });

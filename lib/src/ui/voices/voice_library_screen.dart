@@ -258,6 +258,11 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
         _ => true,
       };
     }).toList()..sort((a, b) {
+      final selectedId = widget.appState.selectedVoice?.id;
+      final aSelected = a.id == selectedId;
+      final bSelected = b.id == selectedId;
+      if (aSelected != bSelected) return aSelected ? -1 : 1;
+      if (a.favorite != b.favorite) return a.favorite ? -1 : 1;
       final aTime = a.lastUsedAt;
       final bTime = b.lastUsedAt;
       if (aTime == null && bTime == null) return 0;

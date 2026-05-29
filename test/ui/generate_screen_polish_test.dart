@@ -20,7 +20,7 @@ void main() {
 
     expect(find.text('文本生成'), findsOneWidget);
     expect(find.text('当前音色'), findsOneWidget);
-    expect(find.text('风格提示'), findsOneWidget);
+    expect(find.text('表演指令 / Instruct'), findsOneWidget);
     expect(find.text('声音参数'), findsNothing);
   });
 }

@@ -8,6 +8,7 @@ class GeneratedAudio {
     required this.durationMs,
     required this.createdAt,
     this.title,
+    this.stylePrompt,
     this.favorite = false,
   });
 
@@ -19,6 +20,7 @@ class GeneratedAudio {
   final int durationMs;
   final DateTime createdAt;
   final String? title;
+  final String? stylePrompt;
   final bool favorite;
 
   String get displayTitle {
@@ -36,6 +38,7 @@ class GeneratedAudio {
     int? durationMs,
     DateTime? createdAt,
     String? title,
+    String? stylePrompt,
     bool? favorite,
   }) {
     return GeneratedAudio(
@@ -47,6 +50,7 @@ class GeneratedAudio {
       durationMs: durationMs ?? this.durationMs,
       createdAt: createdAt ?? this.createdAt,
       title: title ?? this.title,
+      stylePrompt: stylePrompt ?? this.stylePrompt,
       favorite: favorite ?? this.favorite,
     );
   }
@@ -61,6 +65,7 @@ class GeneratedAudio {
       'durationMs': durationMs,
       'createdAt': createdAt.toIso8601String(),
       'title': title,
+      'stylePrompt': stylePrompt,
       'favorite': favorite,
     };
   }
@@ -77,6 +82,7 @@ class GeneratedAudio {
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
       title: json['title'] as String?,
+      stylePrompt: json['stylePrompt'] as String?,
       favorite: json['favorite'] as bool? ?? false,
     );
   }

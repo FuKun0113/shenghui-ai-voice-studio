@@ -5,6 +5,46 @@ import 'package:voice_clone_app/src/state/app_state.dart';
 import 'package:voice_clone_app/src/ui/voices/voice_creation_sheet.dart';
 
 void main() {
+  testWidgets('design mode guides users to write professional voice prompts', (
+    tester,
+  ) async {
+    final state = AppState(mimoService: MockMimoService());
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                builder: (_) => VoiceCreationSheet(appState: state),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('写作维度'), findsOneWidget);
+    expect(find.text('性别/年龄'), findsOneWidget);
+    expect(find.text('音色/质感'), findsOneWidget);
+    expect(find.text('角色/人设'), findsOneWidget);
+    expect(find.textContaining('不要写混响'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('专业示例'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('专业示例'));
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('stylePromptField')),
+    );
+    expect(field.controller?.text, contains('年迈的老先生'));
+  });
+
   testWidgets('clone sheet requires name and reference audio before saving', (
     tester,
   ) async {

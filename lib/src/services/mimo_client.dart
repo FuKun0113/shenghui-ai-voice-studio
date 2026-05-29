@@ -280,6 +280,7 @@ class MimoApiService implements MimoService {
       audioPath: audioPath,
       durationMs: durationMs,
       createdAt: DateTime.now(),
+      stylePrompt: request.stylePrompt,
     );
   }
 

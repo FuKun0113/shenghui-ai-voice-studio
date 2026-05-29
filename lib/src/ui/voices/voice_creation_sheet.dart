@@ -135,6 +135,11 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
     });
   }
 
+  void _applyDesignTemplate(String value) {
+    _styleController.text = value;
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -227,18 +232,28 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
                   switchInCurve: Curves.easeOutCubic,
                   switchOutCurve: Curves.easeOutCubic,
                   child: _designMode
-                      ? TextField(
-                          key: const Key('stylePromptField'),
-                          controller: _styleController,
-                          minLines: 3,
-                          maxLines: 4,
-                          decoration: const InputDecoration(
-                            labelText: '音色描述',
-                            hintText: '例如：年轻女性，温柔、清晰，适合旁白。',
-                            prefixIcon: AppPrefixIcon(
-                              HugeIcons.strokeRoundedEdit02,
+                      ? Column(
+                          key: const ValueKey<String>('designModeFields'),
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            _VoiceDesignGuidance(
+                              onTemplateSelected: _applyDesignTemplate,
                             ),
-                          ),
+                            const SizedBox(height: 12),
+                            TextField(
+                              key: const Key('stylePromptField'),
+                              controller: _styleController,
+                              minLines: 4,
+                              maxLines: 6,
+                              decoration: const InputDecoration(
+                                labelText: '音色描述',
+                                hintText: '写清年龄/性别、音色质感、语气情绪、语速节奏、角色人设或场景。',
+                                prefixIcon: AppPrefixIcon(
+                                  HugeIcons.strokeRoundedEdit02,
+                                ),
+                              ),
+                            ),
+                          ],
                         )
                       : Column(
                           key: const ValueKey<String>('cloneModeFields'),
@@ -333,6 +348,118 @@ class _VoiceCreationSheetState extends State<VoiceCreationSheet> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VoiceDesignGuidance extends StatelessWidget {
+  const _VoiceDesignGuidance({required this.onTemplateSelected});
+
+  static const String _simpleTemplate =
+      '五十多岁的中年男性，标准普通话，嗓音低沉有磁性，语气沉稳自信，语速适中，像纪录片旁白解说员。';
+  static const String _professionalTemplate =
+      '一位年迈的老先生，说带北方口音的普通话，语速缓慢而沉稳，嗓音略带沙哑和沧桑感，仿佛一位饱经风霜的老爷爷在讲故事，充满岁月的智慧。';
+
+  final ValueChanged<String> onTemplateSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AppPanel(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              AppHugeIcon(
+                HugeIcons.strokeRoundedIdea01,
+                color: scheme.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '写作维度',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: const <Widget>[
+              _PromptDimensionChip(label: '性别/年龄'),
+              _PromptDimensionChip(label: '音色/质感'),
+              _PromptDimensionChip(label: '情绪/语气'),
+              _PromptDimensionChip(label: '语速/节奏'),
+              _PromptDimensionChip(label: '角色/人设'),
+              _PromptDimensionChip(label: '说话风格'),
+              _PromptDimensionChip(label: '场景'),
+              _PromptDimensionChip(label: '年代参照'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '建议 1-4 句写清核心特征；不要写混响、回声、EQ、压缩等后期效果词，也不要用“普通的”“正常的”这类模糊词。',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: AppFlatActionButton(
+                  onPressed: () => onTemplateSelected(_simpleTemplate),
+                  icon: HugeIcons.strokeRoundedSparkles,
+                  label: '简洁示例',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: AppFlatActionButton(
+                  prominent: true,
+                  onPressed: () => onTemplateSelected(_professionalTemplate),
+                  icon: HugeIcons.strokeRoundedMagicWand02,
+                  label: '专业示例',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PromptDimensionChip extends StatelessWidget {
+  const _PromptDimensionChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.62),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ),

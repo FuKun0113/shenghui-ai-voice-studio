@@ -89,11 +89,11 @@ class VoiceCard extends StatelessWidget {
                 IconButton(
                   tooltip: voice.favorite ? '取消收藏' : '收藏',
                   onPressed: onFavorite,
-                  icon: AppHugeIcon(
-                    voice.favorite
-                        ? HugeIcons.strokeRoundedFavourite
-                        : HugeIcons.strokeRoundedFavouriteCircle,
-                  ),
+                  icon: voice.favorite
+                      ? Icon(Icons.favorite, color: scheme.error, size: 22)
+                      : const AppHugeIcon(
+                          HugeIcons.strokeRoundedFavouriteCircle,
+                        ),
                 ),
                 IconButton(
                   tooltip: isPreviewing ? '暂停' : '播放',
