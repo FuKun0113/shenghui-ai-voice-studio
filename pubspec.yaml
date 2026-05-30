@@ -45,7 +45,6 @@ dependencies:
   flutter_animate: ^4.5.2
   syncfusion_flutter_pdf: ^33.2.8
   archive: ^4.0.9
-  crypto: ^3.0.6
   xml: ^6.6.1
   mime: ^2.0.0
   share_plus: ^13.1.0

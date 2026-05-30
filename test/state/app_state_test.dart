@@ -102,13 +102,6 @@ void main() {
 
   test('loads remote app config from injected service', () async {
     const remoteConfig = RemoteAppConfig(
-      adSlots: <RemoteAdSlot>[
-        RemoteAdSlot(
-          placement: 'voice_service',
-          title: '语音服务推荐',
-          enabled: true,
-        ),
-      ],
       popupNotice: RemotePopupNotice(
         title: '欢迎',
         message: '查看最新公告',
@@ -124,10 +117,6 @@ void main() {
 
     await state.loadRemoteAppConfig();
 
-    expect(
-      state.remoteAppConfig.enabledAdSlots.single.placement,
-      'voice_service',
-    );
     expect(state.remoteAppConfig.popupNotice.title, '欢迎');
   });
 

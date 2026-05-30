@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shenghui_ai_voice_studio/src/app/app_theme.dart';
-import 'package:shenghui_ai_voice_studio/src/domain/remote_app_config.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/service_config.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/text_optimization_config.dart';
 import 'package:shenghui_ai_voice_studio/src/services/mock_mimo_service.dart';
-import 'package:shenghui_ai_voice_studio/src/services/remote_app_config_service.dart';
 import 'package:shenghui_ai_voice_studio/src/services/text_optimization_service.dart';
 import 'package:shenghui_ai_voice_studio/src/state/app_state.dart';
 import 'package:shenghui_ai_voice_studio/src/ui/settings/settings_screen.dart';
@@ -30,7 +28,6 @@ void main() {
     expect(find.text('隐私与权限'), findsOneWidget);
     expect(find.text('内容举报与反馈'), findsNothing);
     expect(find.text('关于本 App'), findsOneWidget);
-    expect(find.text('常驻广告位预留'), findsNothing);
     expect(find.text('MiMo 服务'), findsNothing);
     expect(find.text('API URL'), findsNothing);
     expect(find.text('API Key'), findsNothing);
@@ -41,21 +38,7 @@ void main() {
     final state = AppState(
       mimoService: MockMimoService(),
       serviceConfig: const ServiceConfig.directApi(apiKey: 'saved-key'),
-      remoteAppConfigService: StaticRemoteAppConfigService(
-        const RemoteAppConfig(
-          adSlots: <RemoteAdSlot>[
-            RemoteAdSlot(
-              placement: 'voice_service',
-              title: '语音服务推荐',
-              message: '申请或管理语音生成 API 额度。',
-              targetUrl: 'https://example.com/voice-service',
-              enabled: true,
-            ),
-          ],
-        ),
-      ),
     );
-    await state.loadRemoteAppConfig();
 
     await tester.pumpWidget(buildSettings(state));
     await tester.pumpAndSettle();
@@ -74,8 +57,6 @@ void main() {
     expect(find.text('服务密钥'), findsNothing);
     expect(find.text('保存配置'), findsOneWidget);
     expect(find.text('测试连接'), findsOneWidget);
-    expect(find.text('语音服务推荐'), findsOneWidget);
-    expect(find.text('申请或管理语音生成 API 额度。'), findsOneWidget);
     expect(find.text('后端代理'), findsNothing);
     expect(find.text('原型直连 API Key'), findsNothing);
 
@@ -91,28 +72,7 @@ void main() {
   testWidgets('settings menu opens the text optimization service page', (
     tester,
   ) async {
-    final state = AppState(
-      mimoService: MockMimoService(),
-      remoteAppConfigService: StaticRemoteAppConfigService(
-        const RemoteAppConfig(
-          adSlots: <RemoteAdSlot>[
-            RemoteAdSlot(
-              placement: 'text_optimization_service',
-              title: '文本模型推荐',
-              message: '选择适合润色和标签生成的文本模型。',
-              targetUrl: 'https://example.com/text-model',
-              enabled: true,
-            ),
-            RemoteAdSlot(
-              placement: 'text_optimization_service',
-              title: '隐藏文本广告',
-              enabled: false,
-            ),
-          ],
-        ),
-      ),
-    );
-    await state.loadRemoteAppConfig();
+    final state = AppState(mimoService: MockMimoService());
 
     await tester.pumpWidget(buildSettings(state));
     await tester.pumpAndSettle();
@@ -130,45 +90,6 @@ void main() {
     expect(find.text('API Key'), findsOneWidget);
     expect(find.text('服务地址'), findsNothing);
     expect(find.text('服务密钥'), findsNothing);
-    expect(find.text('文本模型推荐'), findsOneWidget);
-    expect(find.text('选择适合润色和标签生成的文本模型。'), findsOneWidget);
-    expect(find.text('隐藏文本广告'), findsNothing);
-    expect(find.text('广告位预留'), findsNothing);
-  });
-
-  testWidgets('settings shows enabled remote ad slot cards only', (
-    tester,
-  ) async {
-    final state = AppState(
-      mimoService: MockMimoService(),
-      remoteAppConfigService: StaticRemoteAppConfigService(
-        const RemoteAppConfig(
-          adSlots: <RemoteAdSlot>[
-            RemoteAdSlot(
-              placement: 'settings_footer',
-              title: '服务推荐',
-              message: '领取语音服务额度',
-              targetUrl: 'https://example.com/promo',
-              enabled: true,
-            ),
-            RemoteAdSlot(
-              placement: 'settings_footer',
-              title: '隐藏广告',
-              enabled: false,
-            ),
-          ],
-        ),
-      ),
-    );
-    await state.loadRemoteAppConfig();
-
-    await tester.pumpWidget(buildSettings(state));
-    await tester.pumpAndSettle();
-
-    expect(find.text('服务推荐'), findsOneWidget);
-    expect(find.text('领取语音服务额度'), findsOneWidget);
-    expect(find.text('隐藏广告'), findsNothing);
-    expect(find.text('常驻广告位预留'), findsNothing);
   });
 
   testWidgets('saved text optimization model remains selectable', (

@@ -2,10 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/remote_app_config.dart';
 
 void main() {
-  test('default remote app config keeps ads notices and updates disabled', () {
+  test('default remote app config keeps notices and updates disabled', () {
     const config = RemoteAppConfig.disabled();
 
-    expect(config.enabledAdSlots, isEmpty);
     expect(config.popupNotice.enabled, isFalse);
     expect(config.updatePolicy.requiresUpdate(currentVersionCode: 1), isFalse);
     expect(
@@ -16,20 +15,6 @@ void main() {
 
   test('parses remote json config payload', () {
     final config = RemoteAppConfig.fromJson(<String, Object?>{
-      'ad_slots': <Object?>[
-        <String, Object?>{
-          'placement': 'settings_footer',
-          'title': '小米语音服务',
-          'message': '领取 API 额度',
-          'target_url': 'https://example.com/mimo',
-          'enabled': true,
-        },
-        <String, Object?>{
-          'placement': 'launch',
-          'title': '未启用',
-          'enabled': false,
-        },
-      ],
       'popup_notice': <String, Object?>{
         'id': 'maintenance-20260530',
         'title': '维护提醒',
@@ -45,8 +30,6 @@ void main() {
       'update_url': 'https://example.com/download',
     });
 
-    expect(config.enabledAdSlots, hasLength(1));
-    expect(config.enabledAdSlots.single.placement, 'settings_footer');
     expect(config.popupNotice.id, 'maintenance-20260530');
     expect(config.popupNotice.acknowledgementKey, 'maintenance-20260530');
     expect(config.popupNotice.title, '维护提醒');

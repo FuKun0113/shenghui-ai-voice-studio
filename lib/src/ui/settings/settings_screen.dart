@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../domain/connection_test_result.dart';
-import '../../domain/remote_app_config.dart';
 import '../../domain/service_config.dart';
 import '../../domain/text_optimization_config.dart';
 import '../../state/app_state.dart';
@@ -24,26 +22,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   @override
-  void initState() {
-    super.initState();
-    widget.appState.addListener(_syncRemoteConfig);
-  }
-
-  @override
-  void dispose() {
-    widget.appState.removeListener(_syncRemoteConfig);
-    super.dispose();
-  }
-
-  void _syncRemoteConfig() {
-    if (mounted) setState(() {});
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final settingsAdSlots = widget.appState.remoteAppConfig.enabledAdSlots
-        .where((slot) => slot.placement == 'settings_footer')
-        .toList();
     final sections = <Widget>[
       AppPanel(
         child: Row(
@@ -197,8 +176,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
-      for (final slot in settingsAdSlots)
-        _RemoteAdSlotCard(slot: slot, icon: HugeIcons.strokeRoundedMegaphone01),
     ];
 
     return SingleChildScrollView(
@@ -349,9 +326,6 @@ class _VoiceServicePageState extends State<_VoiceServicePage> {
 
   @override
   Widget build(BuildContext context) {
-    final voiceServiceAdSlots = widget.appState.remoteAppConfig.enabledAdSlots
-        .where((slot) => slot.placement == 'voice_service')
-        .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -382,10 +356,6 @@ class _VoiceServicePageState extends State<_VoiceServicePage> {
             ],
           ),
         ),
-        for (final slot in voiceServiceAdSlots) ...<Widget>[
-          const SizedBox(height: 12),
-          _RemoteAdSlotCard(slot: slot, icon: HugeIcons.strokeRoundedRocket01),
-        ],
         const SizedBox(height: 12),
         AppPanel(
           child: Column(
@@ -560,12 +530,6 @@ class _TextOptimizationServicePageState
         : currentModel.isNotEmpty
         ? <String>[currentModel]
         : const <String>[];
-    final textOptimizationAdSlots = widget
-        .appState
-        .remoteAppConfig
-        .enabledAdSlots
-        .where((slot) => slot.placement == 'text_optimization_service')
-        .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -592,13 +556,6 @@ class _TextOptimizationServicePageState
             ],
           ),
         ),
-        for (final slot in textOptimizationAdSlots) ...<Widget>[
-          const SizedBox(height: 12),
-          _RemoteAdSlotCard(
-            slot: slot,
-            icon: HugeIcons.strokeRoundedMagicWand02,
-          ),
-        ],
         const SizedBox(height: 12),
         AppPanel(
           child: Column(
@@ -996,69 +953,6 @@ class _MenuTile extends StatelessWidget {
   }
 }
 
-class _RemoteAdSlotCard extends StatelessWidget {
-  const _RemoteAdSlotCard({required this.slot, required this.icon});
-
-  final RemoteAdSlot slot;
-  final List<List<dynamic>> icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: slot.targetUrl.isEmpty
-            ? null
-            : () => _openExternalUrl(slot.targetUrl),
-        child: AppPanel(
-          emphasized: true,
-          child: Row(
-            children: <Widget>[
-              AppHugeIcon(icon, color: scheme.primary, size: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      slot.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    if (slot.message.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 4),
-                      Text(
-                        slot.message,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (slot.targetUrl.isNotEmpty) ...<Widget>[
-                const SizedBox(width: 10),
-                AppHugeIcon(
-                  HugeIcons.strokeRoundedArrowUpRight01,
-                  color: scheme.primary,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _AboutBrandCard extends StatelessWidget {
   const _AboutBrandCard();
 
@@ -1262,10 +1156,4 @@ class _LabeledInfoBlock extends StatelessWidget {
       ),
     );
   }
-}
-
-Future<void> _openExternalUrl(String url) async {
-  final uri = Uri.tryParse(url);
-  if (uri == null) return;
-  await launchUrl(uri, mode: LaunchMode.externalApplication);
 }

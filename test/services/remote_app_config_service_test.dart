@@ -13,7 +13,6 @@ void main() {
       final config = await service.fetch();
 
       expect(config, isA<RemoteAppConfig>());
-      expect(config.enabledAdSlots, isEmpty);
       expect(config.popupNotice.enabled, isFalse);
     },
   );
@@ -23,24 +22,12 @@ void main() {
     () async {
       final primary = FakeRemoteAppConfigService(
         const RemoteAppConfig(
-          adSlots: <RemoteAdSlot>[
-            RemoteAdSlot(
-              placement: 'settings_footer',
-              title: '国内配置',
-              enabled: true,
-            ),
-          ],
+          popupNotice: RemotePopupNotice(title: '国内配置', enabled: true),
         ),
       );
       final fallback = FakeRemoteAppConfigService(
         const RemoteAppConfig(
-          adSlots: <RemoteAdSlot>[
-            RemoteAdSlot(
-              placement: 'settings_footer',
-              title: '兜底配置',
-              enabled: true,
-            ),
-          ],
+          popupNotice: RemotePopupNotice(title: '兜底配置', enabled: true),
         ),
       );
 
@@ -49,7 +36,7 @@ void main() {
         fallback: fallback,
       ).fetch();
 
-      expect(config.enabledAdSlots.single.title, '国内配置');
+      expect(config.popupNotice.title, '国内配置');
       expect(primary.fetchCount, 1);
       expect(fallback.fetchCount, 0);
     },
@@ -61,13 +48,7 @@ void main() {
       final primary = FakeRemoteAppConfigService.throwing();
       final fallback = FakeRemoteAppConfigService(
         const RemoteAppConfig(
-          adSlots: <RemoteAdSlot>[
-            RemoteAdSlot(
-              placement: 'settings_footer',
-              title: '兜底配置',
-              enabled: true,
-            ),
-          ],
+          popupNotice: RemotePopupNotice(title: '兜底配置', enabled: true),
         ),
       );
 
@@ -76,7 +57,7 @@ void main() {
         fallback: fallback,
       ).fetch();
 
-      expect(config.enabledAdSlots.single.title, '兜底配置');
+      expect(config.popupNotice.title, '兜底配置');
       expect(primary.fetchCount, 1);
       expect(fallback.fetchCount, 1);
     },
@@ -100,23 +81,6 @@ void main() {
               "message": "配置来自国内通道",
               "enabled": true
             },
-            "ad_slots": [
-              {
-                "placement": "settings_footer",
-                "title": "国内广告位",
-                "enabled": true
-              },
-              {
-                "placement": "voice_service",
-                "title": "语音服务广告",
-                "enabled": true
-              },
-              {
-                "placement": "text_optimization_service",
-                "title": "文本优化广告",
-                "enabled": true
-              }
-            ],
             "latest_version": "1.0.1",
             "min_supported_version": "1.0.0",
             "latest_version_code": 3
@@ -131,11 +95,6 @@ void main() {
       final config = await service.fetch();
 
       expect(config.popupNotice.title, '国内公告');
-      expect(config.enabledAdSlots.map((slot) => slot.title), <String>[
-        '国内广告位',
-        '语音服务广告',
-        '文本优化广告',
-      ]);
       expect(config.updatePolicy.latestVersion, '1.0.1');
       expect(config.updatePolicy.minSupportedVersion, '1.0.0');
       expect(config.updatePolicy.latestVersionCode, 3);

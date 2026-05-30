@@ -18,7 +18,6 @@ void main() {
       ),
     );
 
-    expect(config.enabledAdSlots, isEmpty);
     expect(config.popupNotice.enabled, isFalse);
     expect(
       config.updatePolicy.latestVersion,
@@ -64,6 +63,39 @@ void main() {
     expect(androidSettings, isNot(contains(removedGradlePlugin)));
     expect(androidAppBuild, isNot(contains(removedGradlePlugin)));
   });
+
+  test(
+    'open source repository does not include optional operations sources',
+    () {
+      final metricsFile = [
+        'usage',
+        'ana'
+            'lytics',
+        'service',
+      ].join('_');
+      expect(File('lib/src/services/$metricsFile.dart').existsSync(), isFalse);
+      expect(
+        File('test/services/${metricsFile}_test.dart').existsSync(),
+        isFalse,
+      );
+
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      expect(pubspec, isNot(contains('crypto')));
+
+      final exampleConfig = File(
+        'config/shenghui-config.example.json',
+      ).readAsStringSync();
+      expect(
+        exampleConfig,
+        isNot(
+          contains(
+            'ad'
+            '_slots',
+          ),
+        ),
+      );
+    },
+  );
 }
 
 Map<String, Object?> _decodeJsonObject(String raw) {

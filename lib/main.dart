@@ -1,8 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
 import 'src/app/build_config.dart';
 import 'src/app/shenghui_app.dart';
@@ -16,7 +14,6 @@ import 'src/services/remote_app_config_service.dart';
 import 'src/services/service_config_store.dart';
 import 'src/services/text_optimization_config_store.dart';
 import 'src/services/text_optimization_service.dart';
-import 'src/services/usage_analytics_service.dart';
 import 'src/state/app_state.dart';
 
 Future<void> main() async {
@@ -41,10 +38,6 @@ Future<void> main() async {
       buildConfig: buildConfig,
     ),
   );
-  final usageAnalyticsService = buildUsageAnalyticsService(
-    buildConfig: buildConfig,
-    jsonStore: jsonStore,
-  );
   await appState.loadLocalData();
   runApp(
     ShenghuiApp(
@@ -53,12 +46,6 @@ Future<void> main() async {
     ),
   );
   unawaited(appState.loadRemoteAppConfig());
-  unawaited(
-    trackStartupUsage(
-      usageAnalyticsService: usageAnalyticsService,
-      buildConfig: buildConfig,
-    ),
-  );
 }
 
 @visibleForTesting
@@ -72,35 +59,5 @@ RemoteAppConfigService buildRemoteAppConfigService({
   return FallbackRemoteAppConfigService(
     primary: HttpRemoteAppConfigService(configUrl: normalizedUrl),
     fallback: StaticRemoteAppConfigService(),
-  );
-}
-
-@visibleForTesting
-UsageAnalyticsService buildUsageAnalyticsService({
-  AppBuildConfig buildConfig = const AppBuildConfig.fromEnvironment(),
-  LocalJsonStore? jsonStore,
-}) {
-  if (!buildConfig.canUseUsageAnalytics) {
-    return const NoopUsageAnalyticsService();
-  }
-  return HttpUsageAnalyticsService(
-    endpoint: buildConfig.normalizedAnalyticsEndpoint,
-    store: jsonStore,
-  );
-}
-
-@visibleForTesting
-Future<void> trackStartupUsage({
-  required UsageAnalyticsService usageAnalyticsService,
-  AppBuildConfig buildConfig = const AppBuildConfig.fromEnvironment(),
-  Future<PackageInfo> Function()? packageInfoLoader,
-  String? platform,
-}) async {
-  final packageInfo = await (packageInfoLoader ?? PackageInfo.fromPlatform)();
-  await usageAnalyticsService.trackAppOpen(
-    versionName: packageInfo.version,
-    buildNumber: packageInfo.buildNumber,
-    platform: platform ?? defaultTargetPlatform.name,
-    channel: buildConfig.normalizedChannel,
   );
 }
