@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       config_url:
-        description: "Optional product JSON config URL. Empty uses repository variable PRODUCT_CONFIG_URL."
+        description: "Optional product JSON config URL. Empty uses repository variable PRODUCT_CONFIG_URL when present."
         required: false
         type: string
       release_notes:
@@ -93,11 +93,12 @@ jobs:
           fi
 
           config_url="${INPUT_CONFIG_URL:-${DEFAULT_CONFIG_URL:-}}"
-          if [[ -z "${config_url}" ]]; then
-            echo "Set repository variable PRODUCT_CONFIG_URL or provide config_url manually." >&2
-            exit 1
+          if [[ -n "${config_url}" ]]; then
+            echo "::add-mask::${config_url}"
+            echo "Product config URL is set."
+          else
+            echo "Product config URL is empty. Building without remote promotion or popup config."
           fi
-          echo "::add-mask::${config_url}"
 
           tag="product-v${VERSION_NAME}+${BUILD_NUMBER}"
           if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
@@ -198,6 +199,6 @@ jobs:
 
             - Branch: `product/official-release`
             - Version: `${{ steps.release.outputs.version }}+${{ steps.release.outputs.build }}`
-            - Config source: repository variable `PRODUCT_CONFIG_URL` or manual workflow input
+            - Config source: repository variable `PRODUCT_CONFIG_URL`, manual workflow input, or empty clean product build
           files: release-artifacts/*
           make_latest: true
