@@ -7,15 +7,6 @@ on:
         description: "User-facing version, for example 1.0.1"
         required: true
         type: string
-      build_number:
-        description: "Android versionCode / build number, must increase"
-        required: true
-        type: string
-      release_notes:
-        description: "Short release notes shown on GitHub Releases"
-        required: false
-        type: string
-        default: "产品版本更新"
       create_release:
         description: "Create a GitHub Release and upload APK/AAB"
         required: true
@@ -24,6 +15,9 @@ on:
 
 permissions:
   contents: write
+
+env:
+  BUILD_NUMBER_OFFSET: 1000
 
 concurrency:
   group: product-release
@@ -53,7 +47,6 @@ jobs:
         env:
           DEFAULT_CONFIG_URL: ${{ vars.PRODUCT_CONFIG_URL }}
           VERSION_NAME: ${{ inputs.version_name }}
-          BUILD_NUMBER: ${{ inputs.build_number }}
         shell: bash
         run: |
           set -euo pipefail
@@ -63,18 +56,15 @@ jobs:
             exit 1
           fi
 
-          if [[ ! "${BUILD_NUMBER}" =~ ^[1-9][0-9]*$ ]]; then
-            echo "build_number must be a positive integer" >&2
-            exit 1
-          fi
+          build_number="$((GITHUB_RUN_NUMBER + BUILD_NUMBER_OFFSET))"
 
           current_version="$(ruby -ne 'puts $1 if /^version:\s*(\S+)/' pubspec.yaml)"
           current_build="0"
           if [[ "${current_version}" == *"+"* ]]; then
             current_build="${current_version##*+}"
           fi
-          if [[ "${BUILD_NUMBER}" -le "${current_build}" ]]; then
-            echo "build_number (${BUILD_NUMBER}) must be greater than current build (${current_build})" >&2
+          if [[ "${build_number}" -le "${current_build}" ]]; then
+            echo "generated build_number (${build_number}) must be greater than current build (${current_build})" >&2
             exit 1
           fi
 
@@ -86,13 +76,13 @@ jobs:
             echo "Product config URL is empty. Building without remote promotion or popup config."
           fi
 
-          tag="v${VERSION_NAME}+${BUILD_NUMBER}"
+          tag="v${VERSION_NAME}+${build_number}"
           if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
             echo "Release tag ${tag} already exists." >&2
             exit 1
           fi
 
-          artifact_slug="shenghui-${VERSION_NAME}+${BUILD_NUMBER}"
+          artifact_slug="shenghui-${VERSION_NAME}+${build_number}"
 
           {
             echo "PRODUCT_CONFIG_URL<<EOF"
@@ -101,7 +91,7 @@ jobs:
           } >> "${GITHUB_ENV}"
 
           echo "version=${VERSION_NAME}" >> "${GITHUB_OUTPUT}"
-          echo "build=${BUILD_NUMBER}" >> "${GITHUB_OUTPUT}"
+          echo "build=${build_number}" >> "${GITHUB_OUTPUT}"
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
           echo "artifact_slug=${artifact_slug}" >> "${GITHUB_OUTPUT}"
 
@@ -180,11 +170,6 @@ jobs:
         with:
           tag_name: ${{ steps.release.outputs.tag }}
           name: 声绘 ${{ steps.release.outputs.version }} (${{ steps.release.outputs.build }})
-          body: |
-            ${{ inputs.release_notes }}
-
-            - Branch: `main`
-            - Version: `${{ steps.release.outputs.version }}+${{ steps.release.outputs.build }}`
-            - Config source: repository variable `PRODUCT_CONFIG_URL`, or empty clean product build
+          generate_release_notes: true
           files: release-artifacts/*
           make_latest: true

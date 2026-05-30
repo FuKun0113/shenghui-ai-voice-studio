@@ -185,6 +185,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   _VersionInfoCard(),
+                  _RepositoryLinkCard(),
                   _InfoSectionCard(
                     icon: HugeIcons.strokeRoundedPackage,
                     title: '服务说明',
@@ -1106,6 +1107,64 @@ class _AboutBrandCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RepositoryLinkCard extends StatelessWidget {
+  const _RepositoryLinkCard();
+
+  static const String _repositoryUrl =
+      'https://github.com/FuKun0113/shenghui-ai-voice-studio';
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => _openExternalUrl(_repositoryUrl),
+        child: AppPanel(
+          child: Row(
+            children: <Widget>[
+              AppHugeIcon(
+                HugeIcons.strokeRoundedCodeCircle,
+                color: scheme.primary,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      '开源仓库',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _repositoryUrl,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              AppHugeIcon(
+                HugeIcons.strokeRoundedArrowUpRight01,
+                color: scheme.primary,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

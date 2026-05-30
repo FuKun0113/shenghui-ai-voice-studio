@@ -208,6 +208,11 @@ void main() {
     expect(find.widgetWithText(AppBar, '关于声绘'), findsOneWidget);
     expect(find.byKey(const Key('aboutAppIcon')), findsOneWidget);
     expect(find.text('版本信息'), findsOneWidget);
+    expect(find.text('开源仓库'), findsOneWidget);
+    expect(
+      find.text('https://github.com/FuKun0113/shenghui-ai-voice-studio'),
+      findsOneWidget,
+    );
     expect(find.text('使用建议'), findsOneWidget);
     expect(find.textContaining('正式发布'), findsNothing);
     expect(find.textContaining('预留'), findsNothing);
