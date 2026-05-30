@@ -30,15 +30,15 @@ PRODUCT_CONFIG_URL=https://your-domain.example/shenghui-product-config.json
 Flutter 从 `pubspec.yaml` 读取应用版本：
 
 ```yaml
-version: 1.0.0+8
+version: 0.0.1+1
 ```
 
-- `1.0.0` 是用户看到的版本号。
-- `8` 是构建号，也是 Android `versionCode`。
+- `0.0.1` 是用户看到的版本号。
+- `1` 是构建号，也是 Android `versionCode` 的起点。
 - 运行发版 workflow 时只需要填写用户看到的版本号。
 - 构建号由 GitHub Actions 自动生成，规则是 `workflow run number + 1000`。
 - 每次产品发版都会得到更大的构建号。
-- GitHub Release tag 使用 `v1.0.0+8`。
+- GitHub Release tag 使用 `v0.0.1`、`v0.0.2` 这样的纯版本号格式。
 - GitHub Release 说明由工作流自动生成，会列出版本、构建号、配置状态、下载文件、校验文件和上一个 tag 之后的提交记录。
 
 ## 发版步骤
@@ -46,7 +46,7 @@ version: 1.0.0+8
 1. 打开 GitHub Actions。
 2. 选择 `Product Release`。
 3. 点击 `Run workflow`。
-4. 填写 `version_name`，例如 `1.0.1`。
+4. 填写 `version_name`，例如 `0.0.2`。
 5. 正常发版时保持 `create_release` 开启。
 
 工作流会依次执行代码检查、测试、构建 APK/AAB，把版本号提交到

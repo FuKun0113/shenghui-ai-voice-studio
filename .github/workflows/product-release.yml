@@ -79,7 +79,7 @@ jobs:
           fi
 
           previous_tag="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
-          tag="v${VERSION_NAME}+${build_number}"
+          tag="v${VERSION_NAME}"
           if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
             echo "Release tag ${tag} already exists." >&2
             exit 1
@@ -173,7 +173,8 @@ jobs:
           {
             echo "## 本次发布"
             echo
-            echo "- 版本：\`${VERSION_NAME}+${BUILD_NUMBER}\`"
+            echo "- 版本：\`${VERSION_NAME}\`"
+            echo "- 构建号：\`${BUILD_NUMBER}\`"
             echo "- 构建分支：\`main\`"
             echo "- 远程配置：${CONFIG_STATUS}"
             echo
@@ -210,7 +211,7 @@ jobs:
         run: |
           git add pubspec.yaml pubspec.lock
           git commit -m "chore: release v${VERSION_NAME}+${BUILD_NUMBER}"
-          git tag -a "${TAG_NAME}" -m "Release v${VERSION_NAME}+${BUILD_NUMBER}"
+          git tag -a "${TAG_NAME}" -m "Release v${VERSION_NAME}"
           git push origin HEAD:main
           git push origin "${TAG_NAME}"
 
@@ -226,7 +227,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release.outputs.tag }}
-          name: 声绘 ${{ steps.release.outputs.version }} (${{ steps.release.outputs.build }})
+          name: 声绘 ${{ steps.release.outputs.version }}
           body_path: release-notes.md
           files: release-artifacts/*
           make_latest: true

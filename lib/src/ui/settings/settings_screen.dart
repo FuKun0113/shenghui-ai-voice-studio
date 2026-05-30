@@ -8,15 +8,21 @@ import '../../domain/connection_test_result.dart';
 import '../../domain/remote_app_config.dart';
 import '../../domain/service_config.dart';
 import '../../domain/text_optimization_config.dart';
+import '../../services/release_update_service.dart';
 import '../../state/app_state.dart';
 import '../widgets/app_panel.dart';
 
 const double _settingsInlineControlHeight = 58;
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, required this.appState});
+  const SettingsScreen({
+    super.key,
+    required this.appState,
+    this.releaseUpdateService,
+  });
 
   final AppState appState;
+  final ReleaseUpdateService? releaseUpdateService;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -166,7 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () => _openInfoPage(
                 context,
                 title: '关于声绘',
-                body: const <Widget>[
+                body: <Widget>[
                   _AboutBrandCard(),
                   _InfoSectionCard(
                     icon: HugeIcons.strokeRoundedRocket01,
@@ -184,7 +190,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       '创建或克隆音色前，请确认你拥有对应声音素材的使用授权。',
                     ],
                   ),
-                  _VersionInfoCard(),
+                  _VersionInfoCard(
+                    releaseUpdateService: widget.releaseUpdateService,
+                  ),
                   _RepositoryLinkCard(),
                   _InfoSectionCard(
                     icon: HugeIcons.strokeRoundedPackage,
@@ -1130,7 +1138,7 @@ class _RepositoryLinkCard extends StatelessWidget {
           child: Row(
             children: <Widget>[
               AppHugeIcon(
-                HugeIcons.strokeRoundedCodeCircle,
+                HugeIcons.strokeRoundedGithub,
                 color: scheme.primary,
                 size: 24,
               ),
@@ -1177,29 +1185,263 @@ Future<void> _openExternalUrl(String url) async {
 }
 
 class _VersionInfoCard extends StatelessWidget {
-  const _VersionInfoCard();
+  const _VersionInfoCard({this.releaseUpdateService});
+
+  final ReleaseUpdateService? releaseUpdateService;
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<PackageInfo>(
-      future: PackageInfo.fromPlatform(),
-      builder: (context, snapshot) {
-        final info = snapshot.data;
-        final version = info == null || info.version.trim().isEmpty
-            ? '1.0.0'
-            : info.version.trim();
-        final build = info == null || info.buildNumber.trim().isEmpty
-            ? ''
-            : info.buildNumber.trim();
-        final versionText = build.isEmpty ? version : '$version ($build)';
-        return _InfoSectionCard(
-          icon: HugeIcons.strokeRoundedInformationCircle,
-          title: '版本信息',
-          text: '当前安装版本：$versionText。后续版本请以正式下载渠道为准。',
+    return _VersionInfoCardBody(
+      releaseUpdateService: releaseUpdateService,
+    );
+  }
+}
+
+class _VersionInfoCardBody extends StatefulWidget {
+  const _VersionInfoCardBody({this.releaseUpdateService});
+
+  final ReleaseUpdateService? releaseUpdateService;
+
+  @override
+  State<_VersionInfoCardBody> createState() => _VersionInfoCardBodyState();
+}
+
+class _VersionInfoCardBodyState extends State<_VersionInfoCardBody> {
+  late final Future<PackageInfo> _packageInfoFuture;
+  bool _checking = false;
+  String? _statusText;
+
+  @override
+  void initState() {
+    super.initState();
+    _packageInfoFuture = _loadPackageInfo();
+  }
+
+  Future<PackageInfo> _loadPackageInfo() async {
+    try {
+      return await PackageInfo.fromPlatform();
+    } on Object {
+      return PackageInfo(
+        appName: '声绘',
+        buildNumber: '1',
+        packageName: 'shenghui_ai_voice_studio',
+        version: '0.0.1',
+        buildSignature: '',
+        installerStore: null,
+        installTime: null,
+        updateTime: null,
+      );
+    }
+  }
+
+  Future<void> _checkForUpdate() async {
+    if (_checking) return;
+    setState(() {
+      _checking = true;
+      _statusText = '正在检查最新版本...';
+    });
+
+    try {
+      final info = await _packageInfoFuture;
+      final currentVersion = normalizeVersionString(info.version);
+      final service =
+          widget.releaseUpdateService ?? GitHubReleaseUpdateService();
+      final result = await service.checkLatestRelease(
+        currentVersion: currentVersion,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _statusText = result.hasUpdate
+            ? '发现新版本：${result.latestRelease.version}'
+            : '当前已是最新版本';
+      });
+
+      if (result.hasUpdate) {
+        await _showUpdateDialog(result);
+      } else {
+        await _showLatestDialog(result);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _statusText = '检查失败';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('检查更新失败：${_errorMessage(error)}')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _checking = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _showUpdateDialog(ReleaseUpdateResult result) async {
+    final latest = result.latestRelease;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final scheme = Theme.of(dialogContext).colorScheme;
+        return AlertDialog(
+          icon: HugeIcon(
+            icon: HugeIcons.strokeRoundedSystemUpdate01,
+            color: scheme.primary,
+            size: 30,
+          ),
+          title: Text('发现新版本 ${latest.version}'),
+          content: Text(
+            latest.name?.isNotEmpty == true
+                ? '${latest.name}\n${latest.htmlUrl}'
+                : latest.htmlUrl,
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('稍后'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final navigator = Navigator.of(dialogContext);
+                navigator.pop();
+                await _openExternalUrl(latest.htmlUrl);
+              },
+              child: const Text('查看更新'),
+            ),
+          ],
         );
       },
     );
   }
+
+  Future<void> _showLatestDialog(ReleaseUpdateResult result) async {
+    final latest = result.latestRelease;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final scheme = Theme.of(dialogContext).colorScheme;
+        return AlertDialog(
+          icon: HugeIcon(
+            icon: HugeIcons.strokeRoundedInformationCircle,
+            color: scheme.primary,
+            size: 30,
+          ),
+          title: const Text('已经是最新版本'),
+          content: Text('当前版本 ${result.currentVersion}，仓库最新版本 ${latest.version}。'),
+          actions: <Widget>[
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('知道了'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<PackageInfo>(
+      future: _packageInfoFuture,
+      builder: (context, snapshot) {
+        final info = snapshot.data;
+        final version = info == null || info.version.trim().isEmpty
+            ? '0.0.1'
+            : normalizeVersionString(info.version);
+        final scheme = Theme.of(context).colorScheme;
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: _checking ? null : _checkForUpdate,
+            child: AppPanel(
+              child: Row(
+                children: <Widget>[
+                  AppHugeIcon(
+                    HugeIcons.strokeRoundedInformationCircle,
+                    color: scheme.primary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                '版本信息',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            if (_checking)
+                              AppHugeIcon(
+                                HugeIcons.strokeRoundedRefresh01,
+                                color: scheme.primary,
+                                size: 18,
+                              )
+                            else
+                              AppHugeIcon(
+                                HugeIcons.strokeRoundedArrowRight01,
+                                color: scheme.primary,
+                                size: 18,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '当前版本：$version',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (_statusText != null) ...<Widget>[
+                          const SizedBox(height: 4),
+                          Text(
+                            _statusText!,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              color: scheme.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ] else ...<Widget>[
+                          const SizedBox(height: 4),
+                          Text(
+                            '点击检查最新版本',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+String _errorMessage(Object error) {
+  if (error is StateError) {
+    return error.message;
+  }
+  return error.toString();
 }
 
 class _InfoSectionCard extends StatelessWidget {

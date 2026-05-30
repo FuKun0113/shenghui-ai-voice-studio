@@ -4,13 +4,28 @@ import 'package:shenghui_ai_voice_studio/src/app/app_theme.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/remote_app_config.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/service_config.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/text_optimization_config.dart';
+import 'package:shenghui_ai_voice_studio/src/services/release_update_service.dart';
 import 'package:shenghui_ai_voice_studio/src/services/mock_mimo_service.dart';
 import 'package:shenghui_ai_voice_studio/src/services/remote_app_config_service.dart';
 import 'package:shenghui_ai_voice_studio/src/services/text_optimization_service.dart';
 import 'package:shenghui_ai_voice_studio/src/state/app_state.dart';
 import 'package:shenghui_ai_voice_studio/src/ui/settings/settings_screen.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 void main() {
+  setUpAll(() {
+    PackageInfo.setMockInitialValues(
+      appName: '声绘',
+      packageName: 'shenghui_ai_voice_studio',
+      version: '0.0.1',
+      buildNumber: '1',
+      buildSignature: '',
+      installerStore: null,
+      installTime: null,
+      updateTime: null,
+    );
+  });
+
   Widget buildSettings(AppState state) {
     return MaterialApp(
       theme: AppTheme.light(),
@@ -244,4 +259,55 @@ void main() {
 
     expect(find.text('内容举报与反馈'), findsNothing);
   });
+
+  testWidgets('version card checks the latest release and shows update dialog', (
+    tester,
+  ) async {
+    final state = AppState(mimoService: MockMimoService());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: SettingsScreen(
+            appState: state,
+            releaseUpdateService: _FakeReleaseUpdateService(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('关于本 App'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('版本信息'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('版本信息'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('发现新版本 0.0.2'), findsOneWidget);
+    expect(find.text('查看更新'), findsOneWidget);
+  });
+}
+
+class _FakeReleaseUpdateService implements ReleaseUpdateService {
+  @override
+  Future<ReleaseUpdateResult> checkLatestRelease({
+    required String currentVersion,
+  }) async {
+    return ReleaseUpdateResult(
+      currentVersion: currentVersion,
+      latestRelease: const ReleaseUpdateInfo(
+        tagName: 'v0.0.2',
+        version: '0.0.2',
+        htmlUrl: 'https://github.com/FuKun0113/shenghui-ai-voice-studio/releases/tag/v0.0.2',
+        name: '声绘 0.0.2',
+      ),
+    );
+  }
 }
