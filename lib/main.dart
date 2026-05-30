@@ -1,11 +1,9 @@
 import 'dart:async';
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import 'firebase_options.dart';
 import 'src/app/build_config.dart';
 import 'src/app/shenghui_app.dart';
 import 'src/services/local_draft_store.dart';
@@ -24,9 +22,6 @@ import 'src/state/app_state.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   const buildConfig = AppBuildConfig.fromEnvironment();
-  final firebaseReady = buildConfig.isOfficialBuild
-      ? await initializeFirebaseForStartup()
-      : false;
   final jsonStore = SharedPreferencesJsonStore();
   final configStore = LocalServiceConfigStore();
   final textOptimizationConfigStore = LocalTextOptimizationConfigStore();
@@ -43,7 +38,6 @@ Future<void> main() async {
     historyStore: LocalHistoryStore(jsonStore: jsonStore),
     draftStore: LocalDraftStore(jsonStore: jsonStore),
     remoteAppConfigService: buildRemoteAppConfigService(
-      firebaseReady: firebaseReady,
       buildConfig: buildConfig,
     ),
   );
@@ -69,20 +63,15 @@ Future<void> main() async {
 
 @visibleForTesting
 RemoteAppConfigService buildRemoteAppConfigService({
-  required bool firebaseReady,
   AppBuildConfig buildConfig = const AppBuildConfig.fromEnvironment(),
 }) {
-  if (!buildConfig.canUseRemoteConfig) {
+  final normalizedUrl = buildConfig.normalizedRemoteConfigUrl;
+  if (!buildConfig.canUseRemoteConfig || normalizedUrl.isEmpty) {
     return StaticRemoteAppConfigService();
   }
-  final firebaseFallback = firebaseReady
-      ? FirebaseRemoteAppConfigService()
-      : StaticRemoteAppConfigService();
-  final normalizedUrl = buildConfig.normalizedRemoteConfigUrl;
-  if (normalizedUrl.isEmpty) return firebaseFallback;
   return FallbackRemoteAppConfigService(
     primary: HttpRemoteAppConfigService(configUrl: normalizedUrl),
-    fallback: firebaseFallback,
+    fallback: StaticRemoteAppConfigService(),
   );
 }
 
@@ -113,45 +102,5 @@ Future<void> trackStartupUsage({
     buildNumber: packageInfo.buildNumber,
     platform: platform ?? defaultTargetPlatform.name,
     channel: buildConfig.normalizedChannel,
-  );
-}
-
-@visibleForTesting
-Future<bool> initializeFirebaseForStartup({
-  Future<void> Function()? initialize,
-  Duration timeout = const Duration(seconds: 2),
-  bool logFailures = true,
-}) async {
-  try {
-    await (initialize ?? _initializeFirebaseApp)().timeout(timeout);
-    return true;
-  } on TimeoutException catch (error) {
-    _logFirebaseStartupFailure(
-      'Firebase startup timed out: $error',
-      logFailures,
-    );
-  } on UnsupportedError catch (error) {
-    _logFirebaseStartupFailure('Firebase skipped: $error', logFailures);
-  } on FirebaseException catch (error) {
-    _logFirebaseStartupFailure(
-      'Firebase initialization failed: ${error.message}',
-      logFailures,
-    );
-  } on Object catch (error) {
-    _logFirebaseStartupFailure(
-      'Firebase initialization skipped: $error',
-      logFailures,
-    );
-  }
-  return false;
-}
-
-void _logFirebaseStartupFailure(String message, bool enabled) {
-  if (enabled) debugPrint(message);
-}
-
-Future<void> _initializeFirebaseApp() {
-  return Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
   );
 }

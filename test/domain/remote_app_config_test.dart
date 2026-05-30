@@ -14,7 +14,7 @@ void main() {
     );
   });
 
-  test('parses firebase remote config style payload', () {
+  test('parses remote json config payload', () {
     final config = RemoteAppConfig.fromJson(<String, Object?>{
       'ad_slots': <Object?>[
         <String, Object?>{

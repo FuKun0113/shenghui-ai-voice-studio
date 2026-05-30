@@ -13,13 +13,12 @@ English keywords: Flutter AI voice studio, TTS, voice cloning, speech synthesis,
 - 高级标签：支持在文本中插入风格标签、音频标签和方言标签，并在页面中高亮渲染。
 - 文档导入：支持 TXT、Word、PDF 文档文本提取，用于分段语音生成。
 - 文本优化服务：支持 OpenAI 兼容接口，用于生成表演指令、优化文本和补充标签。
-- 官方构建运营：源码默认关闭远程配置、推广位和匿名统计；官方 APK 可通过构建参数启用。
+- 官方构建运营：源码默认关闭远程运营配置和匿名统计；官方 APK 可通过构建参数启用。
 
 ## 技术栈
 
 - Flutter / Dart
 - Android 原生构建链路
-- Optional Firebase Remote Config fallback
 - Optional Cloudflare R2 JSON remote config
 - OpenAI-compatible HTTP API
 - MiMo-compatible speech synthesis API
@@ -31,7 +30,7 @@ flutter pub get
 flutter run
 ```
 
-源码默认构建不启用推广位、弹窗运营配置或匿名统计：
+源码默认构建不启用远程运营配置或匿名统计：
 
 ```bash
 flutter build apk --release
@@ -64,7 +63,7 @@ config/shenghui-config.example.json
 真实运营配置建议放在私有 ops 仓库、私有存储桶或发布流水线 Secrets 中，不提交到开源源码。配置说明见：
 
 ```text
-docs/firebase-remote-config.md
+docs/official-build-config.md
 ```
 
 远程配置只应保存公开运营信息，例如推荐位、弹窗通知、版本更新策略。不要把 API Key、签名密钥、用户隐私数据写入远程配置文件。

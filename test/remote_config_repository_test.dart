@@ -39,6 +39,31 @@ void main() {
 
     expect(workflow.existsSync(), isFalse);
   });
+
+  test('open source repository does not include third party config wiring', () {
+    const removedService =
+        'fire'
+        'base';
+    const removedGradlePlugin =
+        'google'
+        '-services';
+    expect(File('$removedService.json').existsSync(), isFalse);
+    expect(File('lib/${removedService}_options.dart').existsSync(), isFalse);
+    expect(File('android/app/$removedGradlePlugin.json').existsSync(), isFalse);
+
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    expect(pubspec, isNot(contains('${removedService}_core')));
+    expect(pubspec, isNot(contains('${removedService}_remote_config')));
+
+    final androidSettings = File(
+      'android/settings.gradle.kts',
+    ).readAsStringSync();
+    final androidAppBuild = File(
+      'android/app/build.gradle.kts',
+    ).readAsStringSync();
+    expect(androidSettings, isNot(contains(removedGradlePlugin)));
+    expect(androidAppBuild, isNot(contains(removedGradlePlugin)));
+  });
 }
 
 Map<String, Object?> _decodeJsonObject(String raw) {
