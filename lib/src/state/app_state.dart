@@ -5,7 +5,6 @@ import 'package:uuid/uuid.dart';
 
 import '../domain/generated_audio.dart';
 import '../domain/generation_request.dart';
-import '../domain/remote_app_config.dart';
 import '../domain/service_config.dart';
 import '../domain/text_optimization_config.dart';
 import '../domain/voice.dart';
@@ -15,7 +14,6 @@ import '../services/local_history_store.dart';
 import '../services/local_voice_store.dart';
 import '../services/mimo_client.dart';
 import '../services/reference_audio_store.dart';
-import '../services/remote_app_config_service.dart';
 import '../services/service_config_store.dart';
 import '../services/text_optimization_config_store.dart';
 import '../services/text_optimization_service.dart';
@@ -28,7 +26,6 @@ class AppState extends ChangeNotifier {
     LocalHistoryStore? historyStore,
     LocalDraftStore? draftStore,
     ReferenceAudioStore? referenceAudioStore,
-    RemoteAppConfigService? remoteAppConfigService,
     ServiceConfig? serviceConfig,
     TextOptimizationConfig? textOptimizationConfig,
     this.serviceConfigStore,
@@ -37,8 +34,6 @@ class AppState extends ChangeNotifier {
        _historyStore = historyStore ?? LocalHistoryStore(),
        _draftStore = draftStore ?? LocalDraftStore(),
        _referenceAudioStore = referenceAudioStore ?? ReferenceAudioStore(),
-       _remoteAppConfigService =
-           remoteAppConfigService ?? StaticRemoteAppConfigService(),
        _serviceConfig =
            serviceConfig?.normalized() ?? const ServiceConfig.directApi(),
        _textOptimizationService =
@@ -55,7 +50,6 @@ class AppState extends ChangeNotifier {
   final LocalHistoryStore _historyStore;
   final LocalDraftStore _draftStore;
   final ReferenceAudioStore _referenceAudioStore;
-  final RemoteAppConfigService _remoteAppConfigService;
   final LocalServiceConfigStore? serviceConfigStore;
   final LocalTextOptimizationConfigStore? textOptimizationConfigStore;
   final Uuid _uuid = const Uuid();
@@ -69,7 +63,6 @@ class AppState extends ChangeNotifier {
   String _stylePrompt = '';
   ServiceConfig _serviceConfig;
   TextOptimizationConfig _textOptimizationConfig;
-  RemoteAppConfig _remoteAppConfig = const RemoteAppConfig.disabled();
   bool _isGenerating = false;
   bool _isOptimizingText = false;
   static const String voicePreviewSampleText = '你好，欢迎使用声绘。这是一段用于比较音色的标准试听文本。';
@@ -83,7 +76,6 @@ class AppState extends ChangeNotifier {
   String get stylePrompt => _stylePrompt;
   ServiceConfig get serviceConfig => _serviceConfig;
   TextOptimizationConfig get textOptimizationConfig => _textOptimizationConfig;
-  RemoteAppConfig get remoteAppConfig => _remoteAppConfig;
   bool get isGenerating => _isGenerating;
   bool get isOptimizingText => _isOptimizingText;
 
@@ -109,11 +101,6 @@ class AppState extends ChangeNotifier {
     _speed = draft.speed;
     _emotion = draft.emotion;
     _selectedVoiceId = _resolveSelectedVoiceId(draft.selectedVoiceId);
-    notifyListeners();
-  }
-
-  Future<void> loadRemoteAppConfig() async {
-    _remoteAppConfig = await _remoteAppConfigService.fetch();
     notifyListeners();
   }
 

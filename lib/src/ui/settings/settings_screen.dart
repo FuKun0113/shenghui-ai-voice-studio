@@ -1012,7 +1012,7 @@ class _VersionInfoCard extends StatelessWidget {
         return _InfoSectionCard(
           icon: HugeIcons.strokeRoundedInformationCircle,
           title: '版本信息',
-          text: '当前安装版本：$versionText。后续版本更新会通过应用内提示或下载渠道通知。',
+          text: '当前安装版本：$versionText。后续版本请以正式下载渠道为准。',
         );
       },
     );

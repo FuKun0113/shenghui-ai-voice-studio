@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../services/local_popup_notice_store.dart';
 import '../state/app_state.dart';
 import 'app_shell.dart';
 import 'app_theme.dart';
 
 class ShenghuiApp extends StatelessWidget {
-  const ShenghuiApp({super.key, required this.appState, this.popupNoticeStore});
+  const ShenghuiApp({super.key, required this.appState});
 
   final AppState appState;
-  final LocalPopupNoticeStore? popupNoticeStore;
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +15,7 @@ class ShenghuiApp extends StatelessWidget {
       title: '声绘',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      home: AppShell(appState: appState, popupNoticeStore: popupNoticeStore),
+      home: AppShell(appState: appState),
     );
   }
 }
