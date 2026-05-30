@@ -1,0 +1,93 @@
+name: Sync product branch
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-product-branch
+  cancel-in-progress: true
+
+env:
+  PRODUCT_BRANCH: product/official-release
+  SYNC_BRANCH: automation/sync-product-official-release
+
+jobs:
+  create-sync-pr:
+    name: Create product branch sync PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout product branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PRODUCT_BRANCH }}
+          fetch-depth: 0
+
+      - name: Merge main into sync branch
+        id: merge
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin main
+          git fetch origin "${PRODUCT_BRANCH}"
+          git fetch origin "${SYNC_BRANCH}" || true
+
+          git checkout -B "${SYNC_BRANCH}" "origin/${PRODUCT_BRANCH}"
+          before="$(git rev-parse HEAD)"
+          git merge --no-ff --no-edit origin/main
+          after="$(git rev-parse HEAD)"
+
+          if [ "${before}" = "${after}" ]; then
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Push sync branch
+        if: steps.merge.outputs.changed == 'true'
+        run: git push --force-with-lease origin "${SYNC_BRANCH}"
+
+      - name: Open or update sync pull request
+        if: steps.merge.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          body="$(cat <<'EOF'
+          This PR keeps `product/official-release` aligned with `main`.
+
+          Merge this PR after reviewing conflicts or behavior changes. Keep product-only code on the product branch and avoid merging `product/official-release` back into `main`.
+          EOF
+          )"
+
+          existing_pr="$(gh pr list \
+            --base "${PRODUCT_BRANCH}" \
+            --head "${SYNC_BRANCH}" \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          if [ -n "${existing_pr}" ]; then
+            gh pr edit "${existing_pr}" \
+              --title "Sync main into product branch" \
+              --body "${body}"
+          else
+            gh pr create \
+              --base "${PRODUCT_BRANCH}" \
+              --head "${SYNC_BRANCH}" \
+              --title "Sync main into product branch" \
+              --body "${body}"
+          fi
