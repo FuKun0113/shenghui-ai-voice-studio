@@ -1,0 +1,36 @@
+{
+  "ad_slots": [
+    {
+      "placement": "settings_footer",
+      "title": "示例推荐位",
+      "message": "这是关闭状态的示例配置，官方运营内容不要提交到开源仓库。",
+      "target_url": "https://example.com",
+      "enabled": false
+    },
+    {
+      "placement": "voice_service",
+      "title": "示例语音服务位",
+      "message": "官方构建可通过远程配置启用该位置。",
+      "target_url": "https://example.com",
+      "enabled": false
+    },
+    {
+      "placement": "text_optimization_service",
+      "title": "示例文本服务位",
+      "message": "官方构建可通过远程配置启用该位置。",
+      "target_url": "https://example.com",
+      "enabled": false
+    }
+  ],
+  "popup_notice": {
+    "id": "",
+    "title": "",
+    "message": "",
+    "target_url": "",
+    "enabled": false
+  },
+  "latest_version": "1.0.0",
+  "min_supported_version": "1.0.0",
+  "force_update": false,
+  "update_url": ""
+}

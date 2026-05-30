@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'firebase_options.dart';
+import 'src/app/build_config.dart';
 import 'src/app/shenghui_app.dart';
 import 'src/services/local_draft_store.dart';
 import 'src/services/local_history_store.dart';
@@ -15,11 +18,15 @@ import 'src/services/remote_app_config_service.dart';
 import 'src/services/service_config_store.dart';
 import 'src/services/text_optimization_config_store.dart';
 import 'src/services/text_optimization_service.dart';
+import 'src/services/usage_analytics_service.dart';
 import 'src/state/app_state.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final firebaseReady = await initializeFirebaseForStartup();
+  const buildConfig = AppBuildConfig.fromEnvironment();
+  final firebaseReady = buildConfig.isOfficialBuild
+      ? await initializeFirebaseForStartup()
+      : false;
   final jsonStore = SharedPreferencesJsonStore();
   final configStore = LocalServiceConfigStore();
   final textOptimizationConfigStore = LocalTextOptimizationConfigStore();
@@ -37,7 +44,12 @@ Future<void> main() async {
     draftStore: LocalDraftStore(jsonStore: jsonStore),
     remoteAppConfigService: buildRemoteAppConfigService(
       firebaseReady: firebaseReady,
+      buildConfig: buildConfig,
     ),
+  );
+  final usageAnalyticsService = buildUsageAnalyticsService(
+    buildConfig: buildConfig,
+    jsonStore: jsonStore,
   );
   await appState.loadLocalData();
   runApp(
@@ -47,23 +59,60 @@ Future<void> main() async {
     ),
   );
   unawaited(appState.loadRemoteAppConfig());
+  unawaited(
+    trackStartupUsage(
+      usageAnalyticsService: usageAnalyticsService,
+      buildConfig: buildConfig,
+    ),
+  );
 }
 
 @visibleForTesting
 RemoteAppConfigService buildRemoteAppConfigService({
   required bool firebaseReady,
-  String domesticConfigUrl = const String.fromEnvironment(
-    'SHENGHUI_REMOTE_CONFIG_URL',
-  ),
+  AppBuildConfig buildConfig = const AppBuildConfig.fromEnvironment(),
 }) {
+  if (!buildConfig.canUseRemoteConfig) {
+    return StaticRemoteAppConfigService();
+  }
   final firebaseFallback = firebaseReady
       ? FirebaseRemoteAppConfigService()
       : StaticRemoteAppConfigService();
-  final normalizedUrl = domesticConfigUrl.trim();
+  final normalizedUrl = buildConfig.normalizedRemoteConfigUrl;
   if (normalizedUrl.isEmpty) return firebaseFallback;
   return FallbackRemoteAppConfigService(
     primary: HttpRemoteAppConfigService(configUrl: normalizedUrl),
     fallback: firebaseFallback,
+  );
+}
+
+@visibleForTesting
+UsageAnalyticsService buildUsageAnalyticsService({
+  AppBuildConfig buildConfig = const AppBuildConfig.fromEnvironment(),
+  LocalJsonStore? jsonStore,
+}) {
+  if (!buildConfig.canUseUsageAnalytics) {
+    return const NoopUsageAnalyticsService();
+  }
+  return HttpUsageAnalyticsService(
+    endpoint: buildConfig.normalizedAnalyticsEndpoint,
+    store: jsonStore,
+  );
+}
+
+@visibleForTesting
+Future<void> trackStartupUsage({
+  required UsageAnalyticsService usageAnalyticsService,
+  AppBuildConfig buildConfig = const AppBuildConfig.fromEnvironment(),
+  Future<PackageInfo> Function()? packageInfoLoader,
+  String? platform,
+}) async {
+  final packageInfo = await (packageInfoLoader ?? PackageInfo.fromPlatform)();
+  await usageAnalyticsService.trackAppOpen(
+    versionName: packageInfo.version,
+    buildNumber: packageInfo.buildNumber,
+    platform: platform ?? defaultTargetPlatform.name,
+    channel: buildConfig.normalizedChannel,
   );
 }
 

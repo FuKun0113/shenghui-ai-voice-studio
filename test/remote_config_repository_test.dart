@@ -5,8 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/remote_app_config.dart';
 
 void main() {
-  test('versioned remote config file is valid app config', () {
-    final file = File('config/shenghui-config.json');
+  test('open source repository keeps only a disabled example config', () {
+    final file = File('config/shenghui-config.example.json');
 
     expect(file.existsSync(), isTrue);
 
@@ -18,15 +18,8 @@ void main() {
       ),
     );
 
-    expect(
-      config.enabledAdSlots.map((slot) => slot.placement),
-      containsAll([
-        'settings_footer',
-        'voice_service',
-        'text_optimization_service',
-      ]),
-    );
-    expect(config.popupNotice.id, isNotEmpty);
+    expect(config.enabledAdSlots, isEmpty);
+    expect(config.popupNotice.enabled, isFalse);
     expect(
       config.updatePolicy.latestVersion,
       matches(RegExp(r'^\d+\.\d+\.\d+$')),
@@ -37,18 +30,14 @@ void main() {
     );
   });
 
-  test('github action publishes versioned remote config to r2', () {
+  test('production remote config is not committed to the open source repo', () {
+    expect(File('config/shenghui-config.json').existsSync(), isFalse);
+  });
+
+  test('public github action does not publish production remote config', () {
     final workflow = File('.github/workflows/publish-remote-config.yml');
 
-    expect(workflow.existsSync(), isTrue);
-
-    final yaml = workflow.readAsStringSync();
-    expect(yaml, contains('config/shenghui-config.json'));
-    expect(yaml, contains('jq empty config/shenghui-config.json'));
-    expect(yaml, contains('aws s3 cp'));
-    expect(yaml, contains('R2_ACCESS_KEY_ID'));
-    expect(yaml, contains('R2_SECRET_ACCESS_KEY'));
-    expect(yaml, contains('R2_BUCKET'));
+    expect(workflow.existsSync(), isFalse);
   });
 }
 
