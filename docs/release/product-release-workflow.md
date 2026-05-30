@@ -39,7 +39,7 @@ version: 1.0.0+8
 - 构建号由 GitHub Actions 自动生成，规则是 `workflow run number + 1000`。
 - 每次产品发版都会得到更大的构建号。
 - GitHub Release tag 使用 `v1.0.0+8`。
-- GitHub Release 说明由 GitHub 自动根据上一个 tag 之后的提交生成。
+- GitHub Release 说明由工作流自动生成，会列出版本、构建号、配置状态、下载文件、校验文件和上一个 tag 之后的提交记录。
 
 ## 发版步骤
 

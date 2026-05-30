@@ -72,10 +72,13 @@ jobs:
           if [[ -n "${config_url}" ]]; then
             echo "::add-mask::${config_url}"
             echo "Product config URL is set."
+            config_status="已启用远程配置"
           else
             echo "Product config URL is empty. Building without remote promotion or popup config."
+            config_status="未配置远程配置，构建干净包"
           fi
 
+          previous_tag="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
           tag="v${VERSION_NAME}+${build_number}"
           if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
             echo "Release tag ${tag} already exists." >&2
@@ -94,6 +97,8 @@ jobs:
           echo "build=${build_number}" >> "${GITHUB_OUTPUT}"
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
           echo "artifact_slug=${artifact_slug}" >> "${GITHUB_OUTPUT}"
+          echo "config_status=${config_status}" >> "${GITHUB_OUTPUT}"
+          echo "previous_tag=${previous_tag}" >> "${GITHUB_OUTPUT}"
 
       - name: Set product version
         env:
@@ -145,6 +150,58 @@ jobs:
           cp build/app/outputs/bundle/release/app-release.aab "release-artifacts/${{ steps.release.outputs.artifact_slug }}.aab"
           shasum -a 256 release-artifacts/* > release-artifacts/SHA256SUMS.txt
 
+      - name: Generate release notes
+        env:
+          VERSION_NAME: ${{ steps.release.outputs.version }}
+          BUILD_NUMBER: ${{ steps.release.outputs.build }}
+          TAG_NAME: ${{ steps.release.outputs.tag }}
+          PREVIOUS_TAG: ${{ steps.release.outputs.previous_tag }}
+          ARTIFACT_SLUG: ${{ steps.release.outputs.artifact_slug }}
+          CONFIG_STATUS: ${{ steps.release.outputs.config_status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${PREVIOUS_TAG}" ]]; then
+            changelog_range="${PREVIOUS_TAG}..HEAD"
+            compare_url="https://github.com/${GITHUB_REPOSITORY}/compare/${PREVIOUS_TAG}...${TAG_NAME}"
+          else
+            changelog_range="HEAD"
+            compare_url="https://github.com/${GITHUB_REPOSITORY}/commits/${TAG_NAME}"
+          fi
+
+          {
+            echo "## 本次发布"
+            echo
+            echo "- 版本：\`${VERSION_NAME}+${BUILD_NUMBER}\`"
+            echo "- 构建分支：\`main\`"
+            echo "- 远程配置：${CONFIG_STATUS}"
+            echo
+            echo "## 下载"
+            echo
+            echo "- Android APK：\`${ARTIFACT_SLUG}.apk\`"
+            echo "- Android App Bundle：\`${ARTIFACT_SLUG}.aab\`"
+            echo "- 文件校验：\`SHA256SUMS.txt\`"
+            echo
+            echo "## 更新内容"
+            echo
+          } > release-notes.md
+
+          git log --pretty=format:'- %s (`%h`)' "${changelog_range}" \
+            | grep -v '^- chore: release ' > release-commits.md || true
+          if [[ -s release-commits.md ]]; then
+            cat release-commits.md >> release-notes.md
+          else
+            echo "- 本次发布主要包含版本构建和安装包产物更新。" >> release-notes.md
+          fi
+
+          {
+            echo
+            echo "## 完整变更"
+            echo
+            echo "${compare_url}"
+          } >> release-notes.md
+
       - name: Commit product version and tag
         env:
           TAG_NAME: ${{ steps.release.outputs.tag }}
@@ -170,6 +227,6 @@ jobs:
         with:
           tag_name: ${{ steps.release.outputs.tag }}
           name: 声绘 ${{ steps.release.outputs.version }} (${{ steps.release.outputs.build }})
-          generate_release_notes: true
+          body_path: release-notes.md
           files: release-artifacts/*
           make_latest: true
