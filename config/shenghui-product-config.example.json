@@ -1,0 +1,32 @@
+{
+  "ad_slots": [
+    {
+      "placement": "settings_footer",
+      "title": "示例推荐位",
+      "message": "这里可以放产品正式包里的推荐内容。",
+      "target_url": "https://example.com",
+      "enabled": false
+    },
+    {
+      "placement": "voice_service",
+      "title": "语音服务推荐",
+      "message": "这里可以放语音服务相关入口。",
+      "target_url": "https://example.com",
+      "enabled": false
+    },
+    {
+      "placement": "text_optimization_service",
+      "title": "文本优化服务推荐",
+      "message": "这里可以放文本优化服务相关入口。",
+      "target_url": "https://example.com",
+      "enabled": false
+    }
+  ],
+  "popup_notice": {
+    "id": "",
+    "title": "",
+    "message": "",
+    "target_url": "",
+    "enabled": false
+  }
+}

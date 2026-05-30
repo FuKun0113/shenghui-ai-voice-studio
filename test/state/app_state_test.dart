@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/generation_request.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/draft_state.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/generated_audio.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/remote_app_config.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/service_config.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/voice.dart';
 import 'package:shenghui_ai_voice_studio/src/services/local_draft_store.dart';
@@ -12,6 +13,7 @@ import 'package:shenghui_ai_voice_studio/src/services/local_history_store.dart';
 import 'package:shenghui_ai_voice_studio/src/services/local_json_store.dart';
 import 'package:shenghui_ai_voice_studio/src/services/local_voice_store.dart';
 import 'package:shenghui_ai_voice_studio/src/services/mock_mimo_service.dart';
+import 'package:shenghui_ai_voice_studio/src/services/remote_app_config_service.dart';
 import 'package:shenghui_ai_voice_studio/src/state/app_state.dart';
 
 void main() {
@@ -96,6 +98,37 @@ void main() {
       'https://api.example.com/v1/chat/completions',
     );
     expect(state.serviceConfig.apiKey, 'saved-key');
+  });
+
+  test('loads product config from injected service', () async {
+    const remoteConfig = RemoteAppConfig(
+      adSlots: <RemoteAdSlot>[
+        RemoteAdSlot(
+          placement: 'settings_footer',
+          title: '服务推荐',
+          enabled: true,
+        ),
+      ],
+      popupNotice: RemotePopupNotice(
+        title: '欢迎',
+        message: '查看最新公告',
+        enabled: true,
+      ),
+    );
+    final state = AppState(
+      mimoService: MockMimoService(),
+      remoteAppConfigService: StaticRemoteAppConfigService(remoteConfig),
+    );
+
+    expect(state.remoteAppConfig.popupNotice.enabled, isFalse);
+
+    await state.loadRemoteAppConfig();
+
+    expect(
+      state.remoteAppConfig.enabledAdSlots.single.placement,
+      'settings_footer',
+    );
+    expect(state.remoteAppConfig.popupNotice.title, '欢迎');
   });
 
   test(

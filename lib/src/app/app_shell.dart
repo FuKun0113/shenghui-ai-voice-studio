@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../domain/remote_app_config.dart';
+import '../services/local_popup_notice_store.dart';
 import '../state/app_state.dart';
 import '../ui/generate/generate_screen.dart';
 import '../ui/history/history_screen.dart';
@@ -9,9 +14,10 @@ import '../ui/settings/settings_screen.dart';
 import '../ui/voices/voice_library_screen.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, required this.appState});
+  const AppShell({super.key, required this.appState, this.popupNoticeStore});
 
   final AppState appState;
+  final LocalPopupNoticeStore? popupNoticeStore;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -19,6 +25,24 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _index = 0;
+  late final LocalPopupNoticeStore _popupNoticeStore;
+  bool _popupPromptScheduled = false;
+  bool _popupPromptRunning = false;
+  String? _shownPopupNoticeKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _popupNoticeStore = widget.popupNoticeStore ?? LocalPopupNoticeStore();
+    widget.appState.addListener(_schedulePopupNotice);
+    _schedulePopupNotice();
+  }
+
+  @override
+  void dispose() {
+    widget.appState.removeListener(_schedulePopupNotice);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +116,82 @@ class _AppShellState extends State<AppShell> {
         ],
       ),
     );
+  }
+
+  void _schedulePopupNotice() {
+    if (_popupPromptScheduled || !mounted) return;
+    _popupPromptScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _popupPromptScheduled = false;
+      unawaited(_showPopupNoticeWhenIdle());
+    });
+  }
+
+  Future<void> _showPopupNoticeWhenIdle() async {
+    if (_popupPromptRunning) return;
+    _popupPromptRunning = true;
+    try {
+      final notice = widget.appState.remoteAppConfig.popupNotice;
+      final noticeKey = notice.acknowledgementKey;
+      if (!notice.enabled ||
+          noticeKey.isEmpty ||
+          _shownPopupNoticeKey == noticeKey) {
+        return;
+      }
+      final alreadyAcknowledged = await _popupNoticeStore.isAcknowledged(
+        notice,
+      );
+      if (!mounted || alreadyAcknowledged) return;
+      _shownPopupNoticeKey = noticeKey;
+      await _showPopupNotice(notice);
+    } finally {
+      _popupPromptRunning = false;
+    }
+  }
+
+  Future<void> _showPopupNotice(RemotePopupNotice notice) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final scheme = Theme.of(dialogContext).colorScheme;
+        return AlertDialog(
+          icon: HugeIcon(
+            icon: HugeIcons.strokeRoundedNotification01,
+            color: scheme.primary,
+            size: 30,
+          ),
+          title: Text(notice.title),
+          content: Text(notice.message),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () async {
+                final navigator = Navigator.of(dialogContext);
+                await _popupNoticeStore.acknowledge(notice);
+                navigator.pop();
+              },
+              child: const Text('知道了'),
+            ),
+            if (notice.targetUrl.isNotEmpty)
+              FilledButton(
+                onPressed: () async {
+                  final navigator = Navigator.of(dialogContext);
+                  await _popupNoticeStore.acknowledge(notice);
+                  navigator.pop();
+                  await _openExternalUrl(notice.targetUrl);
+                },
+                child: const Text('查看'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _openExternalUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
 

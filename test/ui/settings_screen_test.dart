@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shenghui_ai_voice_studio/src/app/app_theme.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/remote_app_config.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/service_config.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/text_optimization_config.dart';
 import 'package:shenghui_ai_voice_studio/src/services/mock_mimo_service.dart';
+import 'package:shenghui_ai_voice_studio/src/services/remote_app_config_service.dart';
 import 'package:shenghui_ai_voice_studio/src/services/text_optimization_service.dart';
 import 'package:shenghui_ai_voice_studio/src/state/app_state.dart';
 import 'package:shenghui_ai_voice_studio/src/ui/settings/settings_screen.dart';
@@ -32,6 +34,39 @@ void main() {
     expect(find.text('API URL'), findsNothing);
     expect(find.text('API Key'), findsNothing);
     expect(find.text('保存配置'), findsNothing);
+  });
+
+  testWidgets('settings shows enabled product promotion cards only', (
+    tester,
+  ) async {
+    final state = AppState(
+      mimoService: MockMimoService(),
+      remoteAppConfigService: StaticRemoteAppConfigService(
+        const RemoteAppConfig(
+          adSlots: <RemoteAdSlot>[
+            RemoteAdSlot(
+              placement: 'settings_footer',
+              title: '服务推荐',
+              message: '查看服务入口',
+              enabled: true,
+            ),
+            RemoteAdSlot(
+              placement: 'settings_footer',
+              title: '隐藏推荐',
+              enabled: false,
+            ),
+          ],
+        ),
+      ),
+    );
+    await state.loadRemoteAppConfig();
+
+    await tester.pumpWidget(buildSettings(state));
+    await tester.pumpAndSettle();
+
+    expect(find.text('服务推荐'), findsOneWidget);
+    expect(find.text('查看服务入口'), findsOneWidget);
+    expect(find.text('隐藏推荐'), findsNothing);
   });
 
   testWidgets('settings menu opens the voice service page', (tester) async {

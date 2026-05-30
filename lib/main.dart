@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import 'src/app/product_build_config.dart';
 import 'src/app/shenghui_app.dart';
 import 'src/services/local_draft_store.dart';
 import 'src/services/local_history_store.dart';
 import 'src/services/local_json_store.dart';
+import 'src/services/local_popup_notice_store.dart';
 import 'src/services/local_voice_store.dart';
 import 'src/services/mimo_client.dart';
+import 'src/services/remote_app_config_service.dart';
 import 'src/services/service_config_store.dart';
 import 'src/services/text_optimization_config_store.dart';
 import 'src/services/text_optimization_service.dart';
@@ -13,6 +18,7 @@ import 'src/state/app_state.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  const buildConfig = ProductBuildConfig.fromEnvironment();
   final jsonStore = SharedPreferencesJsonStore();
   final configStore = LocalServiceConfigStore();
   final textOptimizationConfigStore = LocalTextOptimizationConfigStore();
@@ -28,7 +34,29 @@ Future<void> main() async {
     voiceStore: LocalVoiceStore(jsonStore: jsonStore),
     historyStore: LocalHistoryStore(jsonStore: jsonStore),
     draftStore: LocalDraftStore(jsonStore: jsonStore),
+    remoteAppConfigService: buildRemoteAppConfigService(
+      buildConfig: buildConfig,
+    ),
   );
   await appState.loadLocalData();
-  runApp(ShenghuiApp(appState: appState));
+  runApp(
+    ShenghuiApp(
+      appState: appState,
+      popupNoticeStore: LocalPopupNoticeStore(jsonStore: jsonStore),
+    ),
+  );
+  unawaited(appState.loadRemoteAppConfig());
+}
+
+RemoteAppConfigService buildRemoteAppConfigService({
+  ProductBuildConfig buildConfig = const ProductBuildConfig.fromEnvironment(),
+}) {
+  final normalizedUrl = buildConfig.normalizedConfigUrl;
+  if (!buildConfig.canUseProductConfig || normalizedUrl.isEmpty) {
+    return StaticRemoteAppConfigService();
+  }
+  return FallbackRemoteAppConfigService(
+    primary: HttpRemoteAppConfigService(configUrl: normalizedUrl),
+    fallback: StaticRemoteAppConfigService(),
+  );
 }
