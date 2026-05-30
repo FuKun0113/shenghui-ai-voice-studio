@@ -29,7 +29,7 @@ class OpenAiCompatibleTextOptimizationService
     required TextOptimizationConfig config,
   }) async {
     if (!config.hasApiKey) {
-      throw StateError('请先填写文本优化服务 API Key');
+      throw StateError('请先填写文本优化服务密钥');
     }
     final response = await _client.get(
       Uri.parse(config.resolvedModelsApiUrl),
@@ -72,7 +72,7 @@ class OpenAiCompatibleTextOptimizationService
     required TextOptimizationConfig config,
   }) async {
     if (!config.hasApiKey) {
-      throw StateError('请先在设置里填写文本优化服务 API Key');
+      throw StateError('请先在设置里填写文本优化服务密钥');
     }
     final response = await _client.post(
       Uri.parse(config.resolvedApiUrl),

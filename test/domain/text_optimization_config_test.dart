@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/domain/text_optimization_config.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/text_optimization_config.dart';
 
 void main() {
   test('uses an OpenAI-compatible v1 base URL for settings display', () {

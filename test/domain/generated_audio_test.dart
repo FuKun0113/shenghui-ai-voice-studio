@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/domain/generated_audio.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/generated_audio.dart';
 
 void main() {
   test('json round trip keeps title and favorite', () {

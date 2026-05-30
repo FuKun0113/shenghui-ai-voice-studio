@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:voice_clone_app/src/domain/remote_app_config.dart';
-import 'package:voice_clone_app/src/services/remote_app_config_service.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/remote_app_config.dart';
+import 'package:shenghui_ai_voice_studio/src/services/remote_app_config_service.dart';
 
 void main() {
   test(
@@ -18,23 +18,21 @@ void main() {
     },
   );
 
-  test(
-    'firebase remote config keys cover ads notices updates and promo link',
-    () {
-      expect(
-        FirebaseRemoteConfigKeys.all,
-        containsAll(<String>[
-          'ad_slots',
-          'popup_notice',
-          'promo_link',
-          'latest_version_code',
-          'min_supported_version_code',
-          'force_update',
-          'update_url',
-        ]),
-      );
-    },
-  );
+  test('firebase remote config keys cover ads notices and updates', () {
+    expect(
+      FirebaseRemoteConfigKeys.all,
+      containsAll(<String>[
+        'ad_slots',
+        'popup_notice',
+        'latest_version',
+        'min_supported_version',
+        'latest_version_code',
+        'min_supported_version_code',
+        'force_update',
+        'update_url',
+      ]),
+    );
+  });
 
   test(
     'firebase remote app config service maps remote config values into app config',
@@ -42,10 +40,11 @@ void main() {
       final client = FakeRemoteConfigClient(
         stringValues: const <String, String>{
           FirebaseRemoteConfigKeys.adSlots:
-              '[{"placement":"settings_footer","title":"服务推荐","message":"领取额度","target_url":"https://example.com/promo","enabled":true}]',
+              '[{"placement":"settings_footer","title":"服务推荐","message":"领取额度","target_url":"https://example.com/promo","enabled":true},{"placement":"voice_service","title":"语音服务推荐","enabled":true},{"placement":"text_optimization_service","title":"文本模型推荐","enabled":true}]',
           FirebaseRemoteConfigKeys.popupNotice:
               '{"title":"版本提醒","message":"新版本体验更顺滑","target_url":"https://example.com/update","enabled":true}',
-          FirebaseRemoteConfigKeys.promoLink: 'https://example.com/register',
+          FirebaseRemoteConfigKeys.latestVersion: '1.2.0',
+          FirebaseRemoteConfigKeys.minSupportedVersion: '1.1.0',
           FirebaseRemoteConfigKeys.updateUrl: 'https://example.com/download',
         },
         intValues: const <String, int>{
@@ -62,9 +61,14 @@ void main() {
 
       expect(client.didSetDefaults, isTrue);
       expect(client.didFetchAndActivate, isTrue);
-      expect(config.enabledAdSlots.single.title, '服务推荐');
+      expect(config.enabledAdSlots.map((slot) => slot.placement), <String>[
+        'settings_footer',
+        'voice_service',
+        'text_optimization_service',
+      ]);
       expect(config.popupNotice.message, '新版本体验更顺滑');
-      expect(config.promoLink, 'https://example.com/register');
+      expect(config.updatePolicy.latestVersion, '1.2.0');
+      expect(config.updatePolicy.minSupportedVersion, '1.1.0');
       expect(config.updatePolicy.latestVersionCode, 12);
       expect(config.updatePolicy.minSupportedVersionCode, 10);
       expect(config.updatePolicy.forceUpdate, isTrue);
@@ -91,10 +95,26 @@ void main() {
     'fallback remote config service uses primary config when it succeeds',
     () async {
       final primary = FakeRemoteAppConfigService(
-        const RemoteAppConfig(promoLink: 'https://cn.example.com/promo'),
+        const RemoteAppConfig(
+          adSlots: <RemoteAdSlot>[
+            RemoteAdSlot(
+              placement: 'settings_footer',
+              title: '国内配置',
+              enabled: true,
+            ),
+          ],
+        ),
       );
       final fallback = FakeRemoteAppConfigService(
-        const RemoteAppConfig(promoLink: 'https://firebase.example.com/promo'),
+        const RemoteAppConfig(
+          adSlots: <RemoteAdSlot>[
+            RemoteAdSlot(
+              placement: 'settings_footer',
+              title: 'Firebase 配置',
+              enabled: true,
+            ),
+          ],
+        ),
       );
 
       final config = await FallbackRemoteAppConfigService(
@@ -102,7 +122,7 @@ void main() {
         fallback: fallback,
       ).fetch();
 
-      expect(config.promoLink, 'https://cn.example.com/promo');
+      expect(config.enabledAdSlots.single.title, '国内配置');
       expect(primary.fetchCount, 1);
       expect(fallback.fetchCount, 0);
     },
@@ -113,7 +133,15 @@ void main() {
     () async {
       final primary = FakeRemoteAppConfigService.throwing();
       final fallback = FakeRemoteAppConfigService(
-        const RemoteAppConfig(promoLink: 'https://firebase.example.com/promo'),
+        const RemoteAppConfig(
+          adSlots: <RemoteAdSlot>[
+            RemoteAdSlot(
+              placement: 'settings_footer',
+              title: 'Firebase 配置',
+              enabled: true,
+            ),
+          ],
+        ),
       );
 
       final config = await FallbackRemoteAppConfigService(
@@ -121,7 +149,7 @@ void main() {
         fallback: fallback,
       ).fetch();
 
-      expect(config.promoLink, 'https://firebase.example.com/promo');
+      expect(config.enabledAdSlots.single.title, 'Firebase 配置');
       expect(primary.fetchCount, 1);
       expect(fallback.fetchCount, 1);
     },
@@ -140,7 +168,6 @@ void main() {
           return http.Response(
             '''
           {
-            "promo_link": "https://cn.example.com/register",
             "popup_notice": {
               "title": "国内公告",
               "message": "配置来自国内通道",
@@ -151,8 +178,20 @@ void main() {
                 "placement": "settings_footer",
                 "title": "国内广告位",
                 "enabled": true
+              },
+              {
+                "placement": "voice_service",
+                "title": "语音服务广告",
+                "enabled": true
+              },
+              {
+                "placement": "text_optimization_service",
+                "title": "文本优化广告",
+                "enabled": true
               }
             ],
+            "latest_version": "1.0.1",
+            "min_supported_version": "1.0.0",
             "latest_version_code": 3
           }
           ''',
@@ -164,9 +203,14 @@ void main() {
 
       final config = await service.fetch();
 
-      expect(config.promoLink, 'https://cn.example.com/register');
       expect(config.popupNotice.title, '国内公告');
-      expect(config.enabledAdSlots.single.title, '国内广告位');
+      expect(config.enabledAdSlots.map((slot) => slot.title), <String>[
+        '国内广告位',
+        '语音服务广告',
+        '文本优化广告',
+      ]);
+      expect(config.updatePolicy.latestVersion, '1.0.1');
+      expect(config.updatePolicy.minSupportedVersion, '1.0.0');
       expect(config.updatePolicy.latestVersionCode, 3);
     },
   );

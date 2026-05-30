@@ -186,14 +186,14 @@ class MimoApiService implements MimoService {
     if (!config.hasApiKey) {
       return const ConnectionTestResult(
         status: ConnectionTestStatus.missingApiKey,
-        message: '请先填写语音服务 API Key',
+        message: '请先填写语音服务密钥',
       );
     }
     final uri = Uri.tryParse(config.resolvedApiUrl);
     if (uri == null || !uri.hasScheme) {
       return const ConnectionTestResult(
         status: ConnectionTestStatus.invalidUrl,
-        message: 'API URL 无效',
+        message: '服务地址无效',
       );
     }
     try {
@@ -289,7 +289,7 @@ class MimoApiService implements MimoService {
     required Map<String, Object?> body,
   }) async {
     if (!config.hasApiKey) {
-      throw StateError('请先在设置里填写语音服务 API Key');
+      throw StateError('请先在设置里填写语音服务密钥');
     }
     final response = await _client.post(
       Uri.parse(config.resolvedApiUrl),

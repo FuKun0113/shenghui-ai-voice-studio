@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/services/text_segmenter.dart';
+import 'package:shenghui_ai_voice_studio/src/services/text_segmenter.dart';
 
 void main() {
   test('keeps short text as a single segment', () {

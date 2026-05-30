@@ -223,7 +223,7 @@ class _GenerateScreenState extends State<GenerateScreen> {
   void _showSettingsGuidance() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('请先填写语音服务 API Key'),
+        content: const Text('请先在设置里填写语音服务密钥'),
         action: SnackBarAction(
           label: '去设置',
           onPressed: () => widget.onOpenSettings?.call(),

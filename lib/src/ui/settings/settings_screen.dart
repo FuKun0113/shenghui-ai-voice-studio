@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../domain/connection_test_result.dart';
@@ -71,7 +72,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () => _openPage(
                 context,
                 title: '语音服务',
-                icon: HugeIcons.strokeRoundedCloudServer,
                 child: _VoiceServicePage(appState: widget.appState),
               ),
             ),
@@ -79,11 +79,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _MenuTile(
               icon: HugeIcons.strokeRoundedMagicWand02,
               title: '文本优化服务',
-              subtitle: 'OpenAI 兼容接口，用于生成指令和优化文本。',
+              subtitle: 'OpenAI 兼容 API，用于生成指令和优化文本。',
               onTap: () => _openPage(
                 context,
                 title: '文本优化服务',
-                icon: HugeIcons.strokeRoundedMagicWand02,
                 child: _TextOptimizationServicePage(appState: widget.appState),
               ),
             ),
@@ -95,7 +94,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () => _openInfoPage(
                 context,
                 title: '版权与授权声明',
-                icon: HugeIcons.strokeRoundedCopyright,
                 body: const <Widget>[
                   _InfoSectionCard(
                     icon: HugeIcons.strokeRoundedShieldUser,
@@ -129,7 +127,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () => _openInfoPage(
                 context,
                 title: '隐私与权限',
-                icon: HugeIcons.strokeRoundedShield01,
                 body: const <Widget>[
                   _InfoSectionCard(
                     icon: HugeIcons.strokeRoundedMic01,
@@ -150,13 +147,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: HugeIcons.strokeRoundedCloudOff,
                     title: '数据传输',
                     text:
-                        '当前版本不提供账号体系，也不主动同步用户本地历史到云端。调用语音服务或文本优化服务时，请求所需文本、指令或参考音频会发送到用户配置的服务接口。',
+                        '生成历史、用户音色和草稿默认只保存在本机。调用语音服务或文本优化服务时，请求所需文本、指令或参考音频会发送到用户配置的服务。',
                   ),
                   _InfoSectionCard(
                     icon: HugeIcons.strokeRoundedKey02,
-                    title: 'API Key 本地保存',
+                    title: '服务密钥本地保存',
                     text:
-                        '用户填写的语音服务和文本优化服务 API Key 仅保存在本机本 App 的本地配置中，不会上传到声绘后台。请妥善保管自己的密钥，并确认第三方接口的数据处理规则。',
+                        '用户填写的语音服务和文本优化服务密钥仅保存在本机本 App 的本地配置中，不会上传到声绘后台。请妥善保管自己的密钥，并确认第三方服务的数据处理规则。',
                   ),
                 ],
               ),
@@ -169,7 +166,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () => _openInfoPage(
                 context,
                 title: '关于声绘',
-                icon: HugeIcons.strokeRoundedInformationCircle,
                 body: const <Widget>[
                   _AboutBrandCard(),
                   _InfoSectionCard(
@@ -180,17 +176,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _InfoSectionCard(
                     icon: HugeIcons.strokeRoundedSettings05,
-                    title: '当前版本',
+                    title: '使用建议',
                     bullets: <String>[
-                      '当前版本聚焦本地工具体验，不包含账号体系和云端资产管理。',
-                      '广告、通知和推广入口仅保留接口与占位，默认不加载真实广告 SDK。',
-                      '语音服务和文本优化服务由用户在设置中自行配置。',
+                      '第一次使用前，请先在“语音服务”中填写服务地址和密钥。',
+                      '需要自动优化文本时，可在“文本优化服务”中选择一个文本模型。',
+                      '生成音频会保存在本机历史记录，可播放、下载、分享或删除。',
+                      '创建或克隆音色前，请确认你拥有对应声音素材的使用授权。',
                     ],
                   ),
+                  _VersionInfoCard(),
                   _InfoSectionCard(
                     icon: HugeIcons.strokeRoundedPackage,
-                    title: '发布说明预留',
-                    text: '正式发布时可在这里补充版本号、更新日志、第三方组件声明、开源许可和客服/反馈入口。',
+                    title: '服务说明',
+                    text:
+                        '语音生成和文本优化由用户配置的服务提供。不同服务的可用地区、额度、价格和数据处理规则可能不同，请以服务商说明为准。',
                   ),
                 ],
               ),
@@ -222,13 +221,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _openPage(
     BuildContext context, {
     required String title,
-    required List<List<dynamic>> icon,
     required Widget child,
   }) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) =>
-            _SettingsDetailPage(title: title, icon: icon, child: child),
+        builder: (context) => _SettingsDetailPage(title: title, child: child),
       ),
     );
   }
@@ -236,27 +233,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _openInfoPage(
     BuildContext context, {
     required String title,
-    required List<List<dynamic>> icon,
     required List<Widget> body,
   }) {
     _openPage(
       context,
       title: title,
-      icon: icon,
       child: _SettingsInfoPage(body: body),
     );
   }
 }
 
 class _SettingsDetailPage extends StatelessWidget {
-  const _SettingsDetailPage({
-    required this.title,
-    required this.icon,
-    required this.child,
-  });
+  const _SettingsDetailPage({required this.title, required this.child});
 
   final String title;
-  final List<List<dynamic>> icon;
   final Widget child;
 
   @override
@@ -359,7 +349,9 @@ class _VoiceServicePageState extends State<_VoiceServicePage> {
 
   @override
   Widget build(BuildContext context) {
-    final promoLink = widget.appState.remoteAppConfig.promoLink;
+    final voiceServiceAdSlots = widget.appState.remoteAppConfig.enabledAdSlots
+        .where((slot) => slot.placement == 'voice_service')
+        .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -368,7 +360,7 @@ class _VoiceServicePageState extends State<_VoiceServicePage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               Text(
-                '目前默认适配小米 MiMo 的语音服务，也支持兼容同一接口形态的第三方服务。',
+                '语音服务用于生成语音和创建音色。请填写服务商提供的 API URL 和 API Key，保存后可以先测试连接。',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w700,
@@ -377,31 +369,22 @@ class _VoiceServicePageState extends State<_VoiceServicePage> {
               ),
               const SizedBox(height: 10),
               const _LabeledInfoBlock(
-                label: '可用服务',
+                label: '服务要求',
                 description:
-                    '你可以使用小米 MiMo 官方 API 接口和 API Key，也可以填写第三方兼容服务；第三方服务必须同时具备 mimo-v2.5-tts、mimo-v2.5-tts-voiceclone、mimo-v2.5-tts-voicedesign 这三类能力。',
+                    '你可以使用小米 MiMo 官方 API，也可以填写第三方兼容 API；所选服务需要同时支持文本转语音、音色克隆和音色设计三项能力，否则部分功能可能不可用。',
               ),
               const SizedBox(height: 10),
               const _LabeledInfoBlock(
                 label: '填写方式',
                 description:
-                    'API URL 建议只填写到 /v1，例如 https://api.xiaomimimo.com/v1；应用会自动拼接 /chat/completions。API Key 填写服务商提供的密钥，保存在本机。',
+                    'API URL 建议只填写到 /v1，例如 https://api.xiaomimimo.com/v1；应用会自动拼接 /chat/completions。API Key 填写服务商提供的密钥，仅保存在本机。',
               ),
             ],
           ),
         ),
-        if (promoLink.isNotEmpty) ...<Widget>[
+        for (final slot in voiceServiceAdSlots) ...<Widget>[
           const SizedBox(height: 12),
-          _RemoteAdSlotCard(
-            slot: RemoteAdSlot(
-              placement: 'voice_service_promo',
-              title: '语音服务入口',
-              message: '打开服务页面，申请或管理语音生成 API 额度。',
-              targetUrl: promoLink,
-              enabled: true,
-            ),
-            icon: HugeIcons.strokeRoundedRocket01,
-          ),
+          _RemoteAdSlotCard(slot: slot, icon: HugeIcons.strokeRoundedRocket01),
         ],
         const SizedBox(height: 12),
         AppPanel(
@@ -591,7 +574,7 @@ class _TextOptimizationServicePageState
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               SectionHeader(
-                title: 'OpenAI 兼容接口',
+                title: 'OpenAI 兼容 API',
                 subtitle: '用于生成表演指令、润色正文、自动加入风格标签和音频标签。',
               ),
               SizedBox(height: 10),
@@ -604,7 +587,7 @@ class _TextOptimizationServicePageState
               _LabeledInfoBlock(
                 label: '填写方式',
                 description:
-                    'API URL 填写 OpenAI 兼容服务的基础地址，通常到 /v1 为止，例如 https://api.openai.com/v1。API Key 填写该服务提供的密钥，然后点击获取模型并选择一个文本模型。',
+                    'API URL 填写 OpenAI 兼容服务的基础地址，通常到 /v1 为止，例如 https://api.openai.com/v1。API Key 填写该服务提供的密钥。填写后点击获取模型，再选择一个用于文本优化的模型。',
               ),
             ],
           ),
@@ -1112,6 +1095,32 @@ class _AboutBrandCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _VersionInfoCard extends StatelessWidget {
+  const _VersionInfoCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<PackageInfo>(
+      future: PackageInfo.fromPlatform(),
+      builder: (context, snapshot) {
+        final info = snapshot.data;
+        final version = info == null || info.version.trim().isEmpty
+            ? '1.0.0'
+            : info.version.trim();
+        final build = info == null || info.buildNumber.trim().isEmpty
+            ? ''
+            : info.buildNumber.trim();
+        final versionText = build.isEmpty ? version : '$version ($build)';
+        return _InfoSectionCard(
+          icon: HugeIcons.strokeRoundedInformationCircle,
+          title: '版本信息',
+          text: '当前安装版本：$versionText。后续版本更新会通过应用内提示或下载渠道通知。',
+        );
+      },
     );
   }
 }

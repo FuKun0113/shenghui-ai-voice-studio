@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/main.dart' as app;
+import 'package:shenghui_ai_voice_studio/main.dart' as app;
 
 void main() {
   test(

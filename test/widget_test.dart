@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/app/voice_clone_app.dart';
-import 'package:voice_clone_app/src/services/mock_mimo_service.dart';
-import 'package:voice_clone_app/src/state/app_state.dart';
+import 'package:shenghui_ai_voice_studio/src/app/shenghui_app.dart';
+import 'package:shenghui_ai_voice_studio/src/services/mock_mimo_service.dart';
+import 'package:shenghui_ai_voice_studio/src/state/app_state.dart';
 
 void main() {
   testWidgets('app starts on generate screen', (tester) async {
     final state = AppState(mimoService: MockMimoService());
-    await tester.pumpWidget(VoiceCloneApp(appState: state));
+    await tester.pumpWidget(ShenghuiApp(appState: state));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('mainBrandTitle')), findsOneWidget);

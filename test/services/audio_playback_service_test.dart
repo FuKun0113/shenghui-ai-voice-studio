@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/services/audio_playback_service.dart';
+import 'package:shenghui_ai_voice_studio/src/services/audio_playback_service.dart';
 
 void main() {
   test('stops current audio before playing another path', () async {

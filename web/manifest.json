@@ -1,11 +1,11 @@
 {
-    "name": "voice_clone_app",
-    "short_name": "voice_clone_app",
+    "name": "声绘 AI Voice Studio",
+    "short_name": "声绘",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "AI 语音生成、音色设计与声音克隆应用。",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

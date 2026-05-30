@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/domain/service_config.dart';
-import 'package:voice_clone_app/src/services/audio_playback_service.dart';
-import 'package:voice_clone_app/src/services/mock_mimo_service.dart';
-import 'package:voice_clone_app/src/state/app_state.dart';
-import 'package:voice_clone_app/src/ui/generate/generate_screen.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/service_config.dart';
+import 'package:shenghui_ai_voice_studio/src/services/audio_playback_service.dart';
+import 'package:shenghui_ai_voice_studio/src/services/mock_mimo_service.dart';
+import 'package:shenghui_ai_voice_studio/src/state/app_state.dart';
+import 'package:shenghui_ai_voice_studio/src/ui/generate/generate_screen.dart';
 
 void main() {
   testWidgets('generates speech and shows player', (tester) async {
@@ -76,7 +76,7 @@ void main() {
     await tester.tap(find.text('生成语音'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('请先填写语音服务 API Key'), findsOneWidget);
+    expect(find.textContaining('请先在设置里填写语音服务密钥'), findsOneWidget);
     expect(openedSettings, isFalse);
 
     await tester.tap(find.text('去设置'));

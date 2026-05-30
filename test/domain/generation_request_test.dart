@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/domain/generation_request.dart';
-import 'package:voice_clone_app/src/domain/voice.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/generation_request.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/voice.dart';
 
 void main() {
   test('builtin voice routes to builtin tts', () {

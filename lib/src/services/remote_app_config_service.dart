@@ -133,7 +133,8 @@ class FirebaseRemoteAppConfigService implements RemoteAppConfigService {
   static const Map<String, Object> defaults = <String, Object>{
     FirebaseRemoteConfigKeys.adSlots: '[]',
     FirebaseRemoteConfigKeys.popupNotice: '{"enabled":false}',
-    FirebaseRemoteConfigKeys.promoLink: '',
+    FirebaseRemoteConfigKeys.latestVersion: '',
+    FirebaseRemoteConfigKeys.minSupportedVersion: '',
     FirebaseRemoteConfigKeys.latestVersionCode: 0,
     FirebaseRemoteConfigKeys.minSupportedVersionCode: 0,
     FirebaseRemoteConfigKeys.forceUpdate: false,
@@ -156,8 +157,11 @@ class FirebaseRemoteAppConfigService implements RemoteAppConfigService {
         FirebaseRemoteConfigKeys.popupNotice: _decodeMap(
           _client.getString(FirebaseRemoteConfigKeys.popupNotice),
         ),
-        FirebaseRemoteConfigKeys.promoLink: _client.getString(
-          FirebaseRemoteConfigKeys.promoLink,
+        FirebaseRemoteConfigKeys.latestVersion: _client.getString(
+          FirebaseRemoteConfigKeys.latestVersion,
+        ),
+        FirebaseRemoteConfigKeys.minSupportedVersion: _client.getString(
+          FirebaseRemoteConfigKeys.minSupportedVersion,
         ),
         FirebaseRemoteConfigKeys.latestVersionCode: _client.getInt(
           FirebaseRemoteConfigKeys.latestVersionCode,
@@ -204,7 +208,8 @@ class FirebaseRemoteConfigKeys {
 
   static const String adSlots = 'ad_slots';
   static const String popupNotice = 'popup_notice';
-  static const String promoLink = 'promo_link';
+  static const String latestVersion = 'latest_version';
+  static const String minSupportedVersion = 'min_supported_version';
   static const String latestVersionCode = 'latest_version_code';
   static const String minSupportedVersionCode = 'min_supported_version_code';
   static const String forceUpdate = 'force_update';
@@ -213,7 +218,8 @@ class FirebaseRemoteConfigKeys {
   static const List<String> all = <String>[
     adSlots,
     popupNotice,
-    promoLink,
+    latestVersion,
+    minSupportedVersion,
     latestVersionCode,
     minSupportedVersionCode,
     forceUpdate,

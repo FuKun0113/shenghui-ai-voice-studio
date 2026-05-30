@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/domain/audio_format.dart';
-import 'package:voice_clone_app/src/services/audio_validator.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/audio_format.dart';
+import 'package:shenghui_ai_voice_studio/src/services/audio_validator.dart';
 
 void main() {
   test('accepts mp3 and wav reference audio', () {

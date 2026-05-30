@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/domain/connection_test_result.dart';
-import 'package:voice_clone_app/src/domain/generation_request.dart';
-import 'package:voice_clone_app/src/domain/service_config.dart';
-import 'package:voice_clone_app/src/domain/voice.dart';
-import 'package:voice_clone_app/src/services/mimo_client.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/connection_test_result.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/generation_request.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/service_config.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/voice.dart';
+import 'package:shenghui_ai_voice_studio/src/services/mimo_client.dart';
 
 void main() {
   test('builtin request follows MiMo OpenAI-compatible TTS schema', () {
@@ -120,6 +120,7 @@ void main() {
     );
 
     expect(result.status, ConnectionTestStatus.missingApiKey);
+    expect(result.message, '请先填写语音服务密钥');
   });
 }
 

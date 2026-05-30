@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/services/document_text_extractor.dart';
+import 'package:shenghui_ai_voice_studio/src/services/document_text_extractor.dart';
 
 void main() {
   test('extracts UTF-8 text files', () async {

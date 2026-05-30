@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/domain/voice.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/voice.dart';
 
 void main() {
   test('designed voices require reference audio after save', () {

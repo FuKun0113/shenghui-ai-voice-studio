@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:voice_clone_app/src/domain/text_optimization_config.dart';
-import 'package:voice_clone_app/src/services/text_optimization_service.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/text_optimization_config.dart';
+import 'package:shenghui_ai_voice_studio/src/services/text_optimization_service.dart';
 
 void main() {
   test('builds OpenAI-compatible request for tag enrichment', () async {
@@ -122,5 +122,20 @@ void main() {
 
     expect(capturedUrl.toString(), 'https://api.example.com/v1/models');
     expect(models, <String>['alpha-model', 'zeta-model']);
+  });
+
+  test('missing text optimization key uses user-facing wording', () async {
+    final service = OpenAiCompatibleTextOptimizationService();
+
+    expect(
+      () => service.fetchModels(config: const TextOptimizationConfig()),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          '请先填写文本优化服务密钥',
+        ),
+      ),
+    );
   });
 }

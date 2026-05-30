@@ -4,10 +4,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'firebase_options.dart';
-import 'src/app/voice_clone_app.dart';
+import 'src/app/shenghui_app.dart';
 import 'src/services/local_draft_store.dart';
 import 'src/services/local_history_store.dart';
 import 'src/services/local_json_store.dart';
+import 'src/services/local_popup_notice_store.dart';
 import 'src/services/local_voice_store.dart';
 import 'src/services/mimo_client.dart';
 import 'src/services/remote_app_config_service.dart';
@@ -39,7 +40,12 @@ Future<void> main() async {
     ),
   );
   await appState.loadLocalData();
-  runApp(VoiceCloneApp(appState: appState));
+  runApp(
+    ShenghuiApp(
+      appState: appState,
+      popupNoticeStore: LocalPopupNoticeStore(jsonStore: jsonStore),
+    ),
+  );
   unawaited(appState.loadRemoteAppConfig());
 }
 

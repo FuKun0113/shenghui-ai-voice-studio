@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/domain/draft_state.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/draft_state.dart';
 
 void main() {
   test('stores current generation choices', () {

@@ -12,7 +12,7 @@ class MockMimoService implements MimoService {
     if (!config.hasApiKey) {
       return const ConnectionTestResult(
         status: ConnectionTestStatus.missingApiKey,
-        message: '请先填写语音服务 API Key',
+        message: '请先填写语音服务密钥',
       );
     }
     return const ConnectionTestResult(

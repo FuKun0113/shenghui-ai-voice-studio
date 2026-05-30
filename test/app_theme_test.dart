@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/app/app_theme.dart';
+import 'package:shenghui_ai_voice_studio/src/app/app_theme.dart';
 
 void main() {
   test('light theme defines polished workspace tokens', () {

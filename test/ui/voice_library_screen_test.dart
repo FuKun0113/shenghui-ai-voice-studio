@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/services/audio_playback_service.dart';
-import 'package:voice_clone_app/src/services/mock_mimo_service.dart';
-import 'package:voice_clone_app/src/state/app_state.dart';
-import 'package:voice_clone_app/src/ui/voices/voice_library_screen.dart';
+import 'package:shenghui_ai_voice_studio/src/services/audio_playback_service.dart';
+import 'package:shenghui_ai_voice_studio/src/services/mock_mimo_service.dart';
+import 'package:shenghui_ai_voice_studio/src/state/app_state.dart';
+import 'package:shenghui_ai_voice_studio/src/ui/voices/voice_library_screen.dart';
 
 void main() {
   testWidgets('shows MiMo default voices with labels', (tester) async {

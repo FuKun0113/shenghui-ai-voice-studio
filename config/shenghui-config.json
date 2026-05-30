@@ -1,0 +1,36 @@
+{
+  "ad_slots": [
+    {
+      "placement": "settings_footer",
+      "title": "设置页推荐",
+      "message": "领取语音生成 API 额度",
+      "target_url": "https://example.com/promo",
+      "enabled": true
+    },
+    {
+      "placement": "voice_service",
+      "title": "语音服务推荐",
+      "message": "申请或管理语音生成 API 额度。",
+      "target_url": "https://example.com/voice-service",
+      "enabled": true
+    },
+    {
+      "placement": "text_optimization_service",
+      "title": "文本模型推荐",
+      "message": "选择适合润色和标签生成的文本模型。",
+      "target_url": "https://example.com/text-model",
+      "enabled": true
+    }
+  ],
+  "popup_notice": {
+    "id": "maintenance-20260530",
+    "title": "维护提醒",
+    "message": "今晚 23:00 后服务可能短暂不可用。",
+    "target_url": "https://example.com/status",
+    "enabled": true
+  },
+  "latest_version": "1.0.0",
+  "min_supported_version": "1.0.0",
+  "force_update": true,
+  "update_url": "https://example.com/download"
+}

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/domain/mimo_tag_catalog.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/mimo_tag_catalog.dart';
 
 void main() {
   test('advanced examples are sourced from MiMo v2.5 release docs', () {

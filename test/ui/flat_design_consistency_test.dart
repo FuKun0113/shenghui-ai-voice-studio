@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:voice_clone_app/src/ui/widgets/app_panel.dart';
+import 'package:shenghui_ai_voice_studio/src/ui/widgets/app_panel.dart';
 
 void main() {
   testWidgets('icon badges render as line icons without colored blocks', (

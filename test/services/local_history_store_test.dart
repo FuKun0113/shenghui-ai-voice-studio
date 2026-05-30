@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voice_clone_app/src/domain/generated_audio.dart';
-import 'package:voice_clone_app/src/services/local_history_store.dart';
-import 'package:voice_clone_app/src/services/local_json_store.dart';
+import 'package:shenghui_ai_voice_studio/src/domain/generated_audio.dart';
+import 'package:shenghui_ai_voice_studio/src/services/local_history_store.dart';
+import 'package:shenghui_ai_voice_studio/src/services/local_json_store.dart';
 
 void main() {
   test('persists generated audio list', () async {
