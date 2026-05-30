@@ -1,0 +1,203 @@
+name: Product Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "User-facing version, for example 1.0.1"
+        required: true
+        type: string
+      build_number:
+        description: "Android versionCode / build number, must increase"
+        required: true
+        type: string
+      config_url:
+        description: "Optional product JSON config URL. Empty uses repository variable PRODUCT_CONFIG_URL."
+        required: false
+        type: string
+      release_notes:
+        description: "Short release notes shown on GitHub Releases"
+        required: false
+        type: string
+        default: "产品版本更新"
+      create_release:
+        description: "Create a GitHub Release and upload APK/AAB"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: product-release
+  cancel-in-progress: false
+
+env:
+  PRODUCT_BRANCH: product/official-release
+
+jobs:
+  build-product:
+    name: Build product APK and AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout product branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PRODUCT_BRANCH }}
+          fetch-depth: 0
+
+      - name: Prepare product branch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin main
+          git fetch origin "${PRODUCT_BRANCH}"
+          git checkout -B "${PRODUCT_BRANCH}" "origin/${PRODUCT_BRANCH}"
+          git merge --no-ff --no-edit origin/main
+
+      - name: Validate release inputs
+        id: release
+        env:
+          INPUT_CONFIG_URL: ${{ inputs.config_url }}
+          DEFAULT_CONFIG_URL: ${{ vars.PRODUCT_CONFIG_URL }}
+          VERSION_NAME: ${{ inputs.version_name }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "${VERSION_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version_name must look like 1.0.1" >&2
+            exit 1
+          fi
+
+          if [[ ! "${BUILD_NUMBER}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "build_number must be a positive integer" >&2
+            exit 1
+          fi
+
+          current_version="$(ruby -ne 'puts $1 if /^version:\s*(\S+)/' pubspec.yaml)"
+          current_build="0"
+          if [[ "${current_version}" == *"+"* ]]; then
+            current_build="${current_version##*+}"
+          fi
+          if [[ "${BUILD_NUMBER}" -le "${current_build}" ]]; then
+            echo "build_number (${BUILD_NUMBER}) must be greater than current build (${current_build})" >&2
+            exit 1
+          fi
+
+          config_url="${INPUT_CONFIG_URL:-${DEFAULT_CONFIG_URL:-}}"
+          if [[ -z "${config_url}" ]]; then
+            echo "Set repository variable PRODUCT_CONFIG_URL or provide config_url manually." >&2
+            exit 1
+          fi
+          echo "::add-mask::${config_url}"
+
+          tag="product-v${VERSION_NAME}+${BUILD_NUMBER}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "Release tag ${tag} already exists." >&2
+            exit 1
+          fi
+
+          artifact_slug="shenghui-${VERSION_NAME}+${BUILD_NUMBER}"
+
+          {
+            echo "PRODUCT_CONFIG_URL<<EOF"
+            echo "${config_url}"
+            echo "EOF"
+          } >> "${GITHUB_ENV}"
+
+          echo "version=${VERSION_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "build=${BUILD_NUMBER}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "artifact_slug=${artifact_slug}" >> "${GITHUB_OUTPUT}"
+
+      - name: Set product version
+        env:
+          VERSION_NAME: ${{ steps.release.outputs.version }}
+          BUILD_NUMBER: ${{ steps.release.outputs.build }}
+        run: |
+          ruby -0pi -e 'sub(/^version: .*\n/, "version: #{ENV.fetch("VERSION_NAME")}+#{ENV.fetch("BUILD_NUMBER")}\n")' pubspec.yaml
+          grep '^version:' pubspec.yaml
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build APK
+        run: |
+          flutter build apk --release \
+            --build-name="${{ steps.release.outputs.version }}" \
+            --build-number="${{ steps.release.outputs.build }}" \
+            --dart-define=SHENGHUI_PRODUCT_CONFIG_URL="${PRODUCT_CONFIG_URL}"
+
+      - name: Build App Bundle
+        run: |
+          flutter build appbundle --release \
+            --build-name="${{ steps.release.outputs.version }}" \
+            --build-number="${{ steps.release.outputs.build }}" \
+            --dart-define=SHENGHUI_PRODUCT_CONFIG_URL="${PRODUCT_CONFIG_URL}"
+
+      - name: Prepare release artifacts
+        run: |
+          mkdir -p release-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk "release-artifacts/${{ steps.release.outputs.artifact_slug }}.apk"
+          cp build/app/outputs/bundle/release/app-release.aab "release-artifacts/${{ steps.release.outputs.artifact_slug }}.aab"
+          shasum -a 256 release-artifacts/* > release-artifacts/SHA256SUMS.txt
+
+      - name: Commit product version and tag
+        env:
+          TAG_NAME: ${{ steps.release.outputs.tag }}
+          VERSION_NAME: ${{ steps.release.outputs.version }}
+          BUILD_NUMBER: ${{ steps.release.outputs.build }}
+        run: |
+          git add pubspec.yaml pubspec.lock
+          git commit -m "chore: release product v${VERSION_NAME}+${BUILD_NUMBER}"
+          git tag -a "${TAG_NAME}" -m "Product release v${VERSION_NAME}+${BUILD_NUMBER}"
+          git push origin "HEAD:${PRODUCT_BRANCH}"
+          git push origin "${TAG_NAME}"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.release.outputs.artifact_slug }}
+          path: release-artifacts/*
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: inputs.create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          name: 声绘 ${{ steps.release.outputs.version }} (${{ steps.release.outputs.build }})
+          body: |
+            ${{ inputs.release_notes }}
+
+            - Branch: `product/official-release`
+            - Version: `${{ steps.release.outputs.version }}+${{ steps.release.outputs.build }}`
+            - Config source: repository variable `PRODUCT_CONFIG_URL` or manual workflow input
+          files: release-artifacts/*
+          make_latest: true
