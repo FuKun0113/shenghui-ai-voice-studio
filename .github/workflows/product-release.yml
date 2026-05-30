@@ -11,10 +11,6 @@ on:
         description: "Android versionCode / build number, must increase"
         required: true
         type: string
-      config_url:
-        description: "Optional product JSON config URL. Empty uses repository variable PRODUCT_CONFIG_URL when present."
-        required: false
-        type: string
       release_notes:
         description: "Short release notes shown on GitHub Releases"
         required: false
@@ -33,22 +29,18 @@ concurrency:
   group: product-release
   cancel-in-progress: false
 
-env:
-  PRODUCT_BRANCH: product/official-release
-
 jobs:
   build-product:
     name: Build product APK and AAB
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout product branch
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.PRODUCT_BRANCH }}
           fetch-depth: 0
 
-      - name: Prepare product branch
+      - name: Configure git
         shell: bash
         run: |
           set -euo pipefail
@@ -56,15 +48,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git fetch origin main
-          git fetch origin "${PRODUCT_BRANCH}"
-          git checkout -B "${PRODUCT_BRANCH}" "origin/${PRODUCT_BRANCH}"
-          git merge --no-ff --no-edit origin/main
-
       - name: Validate release inputs
         id: release
         env:
-          INPUT_CONFIG_URL: ${{ inputs.config_url }}
           DEFAULT_CONFIG_URL: ${{ vars.PRODUCT_CONFIG_URL }}
           VERSION_NAME: ${{ inputs.version_name }}
           BUILD_NUMBER: ${{ inputs.build_number }}
@@ -92,7 +78,7 @@ jobs:
             exit 1
           fi
 
-          config_url="${INPUT_CONFIG_URL:-${DEFAULT_CONFIG_URL:-}}"
+          config_url="${DEFAULT_CONFIG_URL:-}"
           if [[ -n "${config_url}" ]]; then
             echo "::add-mask::${config_url}"
             echo "Product config URL is set."
@@ -100,7 +86,7 @@ jobs:
             echo "Product config URL is empty. Building without remote promotion or popup config."
           fi
 
-          tag="product-v${VERSION_NAME}+${BUILD_NUMBER}"
+          tag="v${VERSION_NAME}+${BUILD_NUMBER}"
           if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
             echo "Release tag ${tag} already exists." >&2
             exit 1
@@ -176,9 +162,9 @@ jobs:
           BUILD_NUMBER: ${{ steps.release.outputs.build }}
         run: |
           git add pubspec.yaml pubspec.lock
-          git commit -m "chore: release product v${VERSION_NAME}+${BUILD_NUMBER}"
-          git tag -a "${TAG_NAME}" -m "Product release v${VERSION_NAME}+${BUILD_NUMBER}"
-          git push origin "HEAD:${PRODUCT_BRANCH}"
+          git commit -m "chore: release v${VERSION_NAME}+${BUILD_NUMBER}"
+          git tag -a "${TAG_NAME}" -m "Release v${VERSION_NAME}+${BUILD_NUMBER}"
+          git push origin HEAD:main
           git push origin "${TAG_NAME}"
 
       - name: Upload workflow artifacts
@@ -197,8 +183,8 @@ jobs:
           body: |
             ${{ inputs.release_notes }}
 
-            - Branch: `product/official-release`
+            - Branch: `main`
             - Version: `${{ steps.release.outputs.version }}+${{ steps.release.outputs.build }}`
-            - Config source: repository variable `PRODUCT_CONFIG_URL`, manual workflow input, or empty clean product build
+            - Config source: repository variable `PRODUCT_CONFIG_URL`, or empty clean product build
           files: release-artifacts/*
           make_latest: true
