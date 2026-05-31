@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-20A67A.svg" alt="MIT License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache--2.0-20A67A.svg" alt="Apache-2.0 License"></a>
   <img src="https://img.shields.io/badge/Flutter-Android%20first-3B82F6?logo=flutter" alt="Flutter Android first">
   <img src="https://img.shields.io/badge/AI%20Voice-TTS%20%2F%20Voice%20Clone-8B5CF6" alt="AI Voice">
 </p>
@@ -178,7 +178,7 @@ test/                   单元测试和 Widget 测试
 
 ## 开源协议
 
-本项目使用 MIT License。详见 [LICENSE](LICENSE)。
+本项目使用 Apache License 2.0。详见 [LICENSE](LICENSE)。
 
 ## Topics
 
