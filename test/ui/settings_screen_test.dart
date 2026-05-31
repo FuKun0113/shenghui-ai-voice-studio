@@ -4,7 +4,6 @@ import 'package:shenghui_ai_voice_studio/src/app/app_theme.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/remote_app_config.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/service_config.dart';
 import 'package:shenghui_ai_voice_studio/src/domain/text_optimization_config.dart';
-import 'package:shenghui_ai_voice_studio/src/services/release_update_service.dart';
 import 'package:shenghui_ai_voice_studio/src/services/mock_mimo_service.dart';
 import 'package:shenghui_ai_voice_studio/src/services/remote_app_config_service.dart';
 import 'package:shenghui_ai_voice_studio/src/services/text_optimization_service.dart';
@@ -260,20 +259,29 @@ void main() {
     expect(find.text('内容举报与反馈'), findsNothing);
   });
 
-  testWidgets('version card checks the latest release and shows update dialog', (
+  testWidgets('version card reads json update config and shows update dialog', (
     tester,
   ) async {
-    final state = AppState(mimoService: MockMimoService());
+    final state = AppState(
+      mimoService: MockMimoService(),
+      remoteAppConfigService: StaticRemoteAppConfigService(
+        const RemoteAppConfig(
+          appUpdate: RemoteAppUpdate(
+            latestVersion: '0.0.2',
+            title: '发现新版本 0.0.2',
+            message: '这次更新来自远程 JSON 配置。',
+            updateUrl: 'https://download.example.com/shenghui-0.0.2.apk',
+            enabled: true,
+          ),
+        ),
+      ),
+    );
+    await state.loadRemoteAppConfig();
 
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: Scaffold(
-          body: SettingsScreen(
-            appState: state,
-            releaseUpdateService: _FakeReleaseUpdateService(),
-          ),
-        ),
+        home: Scaffold(body: SettingsScreen(appState: state)),
       ),
     );
     await tester.pumpAndSettle();
@@ -292,22 +300,7 @@ void main() {
 
     expect(find.text('发现新版本 0.0.2'), findsOneWidget);
     expect(find.text('查看更新'), findsOneWidget);
+    expect(find.textContaining('当前版本 0.0.1，最新版本 0.0.2'), findsOneWidget);
+    expect(find.textContaining('仓库最新版本'), findsNothing);
   });
-}
-
-class _FakeReleaseUpdateService implements ReleaseUpdateService {
-  @override
-  Future<ReleaseUpdateResult> checkLatestRelease({
-    required String currentVersion,
-  }) async {
-    return ReleaseUpdateResult(
-      currentVersion: currentVersion,
-      latestRelease: const ReleaseUpdateInfo(
-        tagName: 'v0.0.2',
-        version: '0.0.2',
-        htmlUrl: 'https://github.com/FuKun0113/shenghui-ai-voice-studio/releases/tag/v0.0.2',
-        name: '声绘 0.0.2',
-      ),
-    );
-  }
 }

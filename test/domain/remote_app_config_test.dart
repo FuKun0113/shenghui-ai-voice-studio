@@ -7,9 +7,10 @@ void main() {
 
     expect(config.enabledAdSlots, isEmpty);
     expect(config.popupNotice.enabled, isFalse);
+    expect(config.appUpdate.enabled, isFalse);
   });
 
-  test('parses enabled ad slots and popup notice', () {
+  test('parses enabled ad slots popup notice and app update', () {
     final config = RemoteAppConfig.fromJson(<String, Object?>{
       'ad_slots': <Object?>[
         <String, Object?>{
@@ -32,12 +33,29 @@ void main() {
         'target_url': 'https://example.com',
         'enabled': true,
       },
+      'app_update': <String, Object?>{
+        'latest_version': '0.0.2',
+        'title': '新版可用',
+        'message': '新增更稳定的更新检测。',
+        'update_url': 'https://download.example.com/shenghui-0.0.2.apk',
+        'force_update': true,
+        'enabled': true,
+      },
     });
 
     expect(config.enabledAdSlots, hasLength(1));
     expect(config.enabledAdSlots.single.placement, 'settings_footer');
     expect(config.popupNotice.acknowledgementKey, 'notice-20260531');
     expect(config.popupNotice.title, '公告');
+    expect(config.appUpdate.hasVersion, isTrue);
+    expect(config.appUpdate.latestVersion, '0.0.2');
+    expect(config.appUpdate.title, '新版可用');
+    expect(config.appUpdate.message, '新增更稳定的更新检测。');
+    expect(
+      config.appUpdate.updateUrl,
+      'https://download.example.com/shenghui-0.0.2.apk',
+    );
+    expect(config.appUpdate.force, isTrue);
   });
 
   test('popup notice without explicit id falls back to content identity', () {

@@ -2,6 +2,7 @@ class RemoteAppConfig {
   const RemoteAppConfig({
     this.adSlots = const <RemoteAdSlot>[],
     this.popupNotice = const RemotePopupNotice.disabled(),
+    this.appUpdate = const RemoteAppUpdate.disabled(),
   });
 
   const RemoteAppConfig.disabled() : this();
@@ -23,11 +24,17 @@ class RemoteAppConfig {
               Map<String, Object?>.from(json['popup_notice']! as Map),
             )
           : const RemotePopupNotice.disabled(),
+      appUpdate: json['app_update'] is Map
+          ? RemoteAppUpdate.fromJson(
+              Map<String, Object?>.from(json['app_update']! as Map),
+            )
+          : const RemoteAppUpdate.disabled(),
     );
   }
 
   final List<RemoteAdSlot> adSlots;
   final RemotePopupNotice popupNotice;
+  final RemoteAppUpdate appUpdate;
 
   List<RemoteAdSlot> get enabledAdSlots =>
       adSlots.where((slot) => slot.enabled).toList();
@@ -97,4 +104,46 @@ class RemotePopupNotice {
       targetUrl.trim(),
     ].join('\u001f');
   }
+}
+
+class RemoteAppUpdate {
+  const RemoteAppUpdate({
+    this.latestVersion = '',
+    this.title = '',
+    this.message = '',
+    this.updateUrl = '',
+    this.enabled = false,
+    this.force = false,
+  });
+
+  const RemoteAppUpdate.disabled() : this();
+
+  factory RemoteAppUpdate.fromJson(Map<String, Object?> json) {
+    return RemoteAppUpdate(
+      latestVersion:
+          json['latest_version'] as String? ??
+          json['latestVersion'] as String? ??
+          '',
+      title: json['title'] as String? ?? '',
+      message: json['message'] as String? ?? '',
+      updateUrl:
+          json['update_url'] as String? ?? json['updateUrl'] as String? ?? '',
+      enabled: json['enabled'] as bool? ?? false,
+      force:
+          json['force_update'] as bool? ??
+          json['forceUpdate'] as bool? ??
+          json['force'] as bool? ??
+          false,
+    );
+  }
+
+  final String latestVersion;
+  final String title;
+  final String message;
+  final String updateUrl;
+  final bool enabled;
+  final bool force;
+
+  bool get hasVersion => latestVersion.trim().isNotEmpty;
+  bool get hasUpdateUrl => updateUrl.trim().isNotEmpty;
 }

@@ -76,6 +76,13 @@ void main() {
               "message": "配置来自 JSON",
               "enabled": true
             },
+            "app_update": {
+              "latest_version": "0.0.2",
+              "title": "发现新版本 0.0.2",
+              "message": "更新信息来自 JSON",
+              "update_url": "https://download.example.com/shenghui-0.0.2.apk",
+              "enabled": true
+            },
             "ad_slots": [
               {
                 "placement": "settings_footer",
@@ -94,6 +101,8 @@ void main() {
     final config = await service.fetch();
 
     expect(config.popupNotice.title, '产品公告');
+    expect(config.appUpdate.enabled, isTrue);
+    expect(config.appUpdate.latestVersion, '0.0.2');
     expect(config.enabledAdSlots.single.title, '底部入口');
   });
 }

@@ -15,14 +15,9 @@ import '../widgets/app_panel.dart';
 const double _settingsInlineControlHeight = 58;
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({
-    super.key,
-    required this.appState,
-    this.releaseUpdateService,
-  });
+  const SettingsScreen({super.key, required this.appState});
 
   final AppState appState;
-  final ReleaseUpdateService? releaseUpdateService;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -190,9 +185,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       '创建或克隆音色前，请确认你拥有对应声音素材的使用授权。',
                     ],
                   ),
-                  _VersionInfoCard(
-                    releaseUpdateService: widget.releaseUpdateService,
-                  ),
+                  _VersionInfoCard(appState: widget.appState),
                   _RepositoryLinkCard(),
                   _InfoSectionCard(
                     icon: HugeIcons.strokeRoundedPackage,
@@ -1185,22 +1178,20 @@ Future<void> _openExternalUrl(String url) async {
 }
 
 class _VersionInfoCard extends StatelessWidget {
-  const _VersionInfoCard({this.releaseUpdateService});
+  const _VersionInfoCard({required this.appState});
 
-  final ReleaseUpdateService? releaseUpdateService;
+  final AppState appState;
 
   @override
   Widget build(BuildContext context) {
-    return _VersionInfoCardBody(
-      releaseUpdateService: releaseUpdateService,
-    );
+    return _VersionInfoCardBody(appState: appState);
   }
 }
 
 class _VersionInfoCardBody extends StatefulWidget {
-  const _VersionInfoCardBody({this.releaseUpdateService});
+  const _VersionInfoCardBody({required this.appState});
 
-  final ReleaseUpdateService? releaseUpdateService;
+  final AppState appState;
 
   @override
   State<_VersionInfoCardBody> createState() => _VersionInfoCardBodyState();
@@ -1244,32 +1235,46 @@ class _VersionInfoCardBodyState extends State<_VersionInfoCardBody> {
     try {
       final info = await _packageInfoFuture;
       final currentVersion = normalizeVersionString(info.version);
-      final service =
-          widget.releaseUpdateService ?? GitHubReleaseUpdateService();
-      final result = await service.checkLatestRelease(
-        currentVersion: currentVersion,
-      );
+      final update = widget.appState.remoteAppConfig.appUpdate;
+
+      if (!update.enabled || !update.hasVersion) {
+        if (!mounted) return;
+        setState(() {
+          _statusText = '暂未配置更新信息';
+        });
+        await _showNoUpdateConfigDialog(currentVersion);
+        return;
+      }
+
+      final latestVersion = normalizeVersionString(update.latestVersion);
+      final hasUpdate =
+          compareVersionStrings(latestVersion, currentVersion) > 0;
 
       if (!mounted) return;
       setState(() {
-        _statusText = result.hasUpdate
-            ? '发现新版本：${result.latestRelease.version}'
-            : '当前已是最新版本';
+        _statusText = hasUpdate ? '发现新版本：$latestVersion' : '当前已是最新版本';
       });
 
-      if (result.hasUpdate) {
-        await _showUpdateDialog(result);
+      if (hasUpdate) {
+        await _showUpdateDialog(
+          update: update,
+          currentVersion: currentVersion,
+          latestVersion: latestVersion,
+        );
       } else {
-        await _showLatestDialog(result);
+        await _showLatestDialog(
+          currentVersion: currentVersion,
+          latestVersion: latestVersion,
+        );
       }
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _statusText = '检查失败';
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('检查更新失败：${_errorMessage(error)}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('检查更新失败：${_errorMessage(error)}')));
     } finally {
       if (mounted) {
         setState(() {
@@ -1279,45 +1284,59 @@ class _VersionInfoCardBodyState extends State<_VersionInfoCardBody> {
     }
   }
 
-  Future<void> _showUpdateDialog(ReleaseUpdateResult result) async {
-    final latest = result.latestRelease;
+  Future<void> _showUpdateDialog({
+    required RemoteAppUpdate update,
+    required String currentVersion,
+    required String latestVersion,
+  }) async {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
         final scheme = Theme.of(dialogContext).colorScheme;
+        final title = update.title.trim().isEmpty
+            ? '发现新版本 $latestVersion'
+            : update.title.trim();
+        final message = update.message.trim();
+        final updateUrl = update.updateUrl.trim();
         return AlertDialog(
           icon: HugeIcon(
             icon: HugeIcons.strokeRoundedSystemUpdate01,
             color: scheme.primary,
             size: 30,
           ),
-          title: Text('发现新版本 ${latest.version}'),
+          title: Text(title),
           content: Text(
-            latest.name?.isNotEmpty == true
-                ? '${latest.name}\n${latest.htmlUrl}'
-                : latest.htmlUrl,
+            <String>[
+              '当前版本 $currentVersion，最新版本 $latestVersion。',
+              if (message.isNotEmpty) message,
+              if (update.force) '这个版本需要更新后继续使用。',
+              if (updateUrl.isNotEmpty) updateUrl,
+            ].join('\n\n'),
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('稍后'),
             ),
-            FilledButton(
-              onPressed: () async {
-                final navigator = Navigator.of(dialogContext);
-                navigator.pop();
-                await _openExternalUrl(latest.htmlUrl);
-              },
-              child: const Text('查看更新'),
-            ),
+            if (updateUrl.isNotEmpty)
+              FilledButton(
+                onPressed: () async {
+                  final navigator = Navigator.of(dialogContext);
+                  navigator.pop();
+                  await _openExternalUrl(updateUrl);
+                },
+                child: const Text('查看更新'),
+              ),
           ],
         );
       },
     );
   }
 
-  Future<void> _showLatestDialog(ReleaseUpdateResult result) async {
-    final latest = result.latestRelease;
+  Future<void> _showLatestDialog({
+    required String currentVersion,
+    required String latestVersion,
+  }) async {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -1329,7 +1348,31 @@ class _VersionInfoCardBodyState extends State<_VersionInfoCardBody> {
             size: 30,
           ),
           title: const Text('已经是最新版本'),
-          content: Text('当前版本 ${result.currentVersion}，仓库最新版本 ${latest.version}。'),
+          content: Text('当前版本 $currentVersion，最新版本 $latestVersion。'),
+          actions: <Widget>[
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('知道了'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showNoUpdateConfigDialog(String currentVersion) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final scheme = Theme.of(dialogContext).colorScheme;
+        return AlertDialog(
+          icon: HugeIcon(
+            icon: HugeIcons.strokeRoundedInformationCircle,
+            color: scheme.primary,
+            size: 30,
+          ),
+          title: const Text('暂无更新信息'),
+          content: Text('当前版本 $currentVersion。暂时没有可用的版本更新信息。'),
           actions: <Widget>[
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
@@ -1374,11 +1417,8 @@ class _VersionInfoCardBodyState extends State<_VersionInfoCardBody> {
                             Expanded(
                               child: Text(
                                 '版本信息',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                ),
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w900),
                               ),
                             ),
                             if (_checking)
@@ -1398,30 +1438,25 @@ class _VersionInfoCardBodyState extends State<_VersionInfoCardBody> {
                         const SizedBox(height: 4),
                         Text(
                           '当前版本：$version',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
                         if (_statusText != null) ...<Widget>[
                           const SizedBox(height: 4),
                           Text(
                             _statusText!,
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodySmall?.copyWith(
-                              color: scheme.primary,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: scheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
                           ),
                         ] else ...<Widget>[
                           const SizedBox(height: 4),
                           Text(
                             '点击检查最新版本',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
                           ),
                         ],
                       ],
