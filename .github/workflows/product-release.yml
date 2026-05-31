@@ -47,6 +47,7 @@ jobs:
         id: release
         env:
           DEFAULT_CONFIG_URL: ${{ vars.PRODUCT_CONFIG_URL }}
+          MIN_BUILD_NUMBER: ${{ vars.PRODUCT_MIN_BUILD_NUMBER }}
           VERSION_NAME: ${{ inputs.version_name }}
         shell: bash
         run: |
@@ -58,6 +59,15 @@ jobs:
           fi
 
           build_number="${GITHUB_RUN_NUMBER}"
+          if [[ -n "${MIN_BUILD_NUMBER:-}" ]]; then
+            if [[ ! "${MIN_BUILD_NUMBER}" =~ ^[0-9]+$ ]]; then
+              echo "PRODUCT_MIN_BUILD_NUMBER must be a positive integer" >&2
+              exit 1
+            fi
+            if [[ "${build_number}" -lt "${MIN_BUILD_NUMBER}" ]]; then
+              build_number="${MIN_BUILD_NUMBER}"
+            fi
+          fi
 
           current_version="$(ruby -ne 'puts $1 if /^version:\s*(\S+)/' pubspec.yaml)"
           current_build="0"
@@ -65,8 +75,7 @@ jobs:
             current_build="${current_version##*+}"
           fi
           if [[ "${build_number}" -le "${current_build}" ]]; then
-            echo "generated build_number (${build_number}) must be greater than current build (${current_build})" >&2
-            exit 1
+            build_number="$((current_build + 1))"
           fi
 
           config_url="${DEFAULT_CONFIG_URL:-}"
@@ -118,6 +127,47 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Configure Android release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          has_any_signing_secret=false
+          for value in "${ANDROID_KEYSTORE_BASE64:-}" "${ANDROID_KEYSTORE_PASSWORD:-}" "${ANDROID_KEY_ALIAS:-}" "${ANDROID_KEY_PASSWORD:-}"; do
+            if [[ -n "${value}" ]]; then
+              has_any_signing_secret=true
+            fi
+          done
+
+          if [[ "${has_any_signing_secret}" == false ]]; then
+            echo "Android release signing secrets are empty. Release will fall back to debug signing."
+            exit 0
+          fi
+
+          missing=()
+          [[ -n "${ANDROID_KEYSTORE_BASE64:-}" ]] || missing+=("ANDROID_KEYSTORE_BASE64")
+          [[ -n "${ANDROID_KEYSTORE_PASSWORD:-}" ]] || missing+=("ANDROID_KEYSTORE_PASSWORD")
+          [[ -n "${ANDROID_KEY_ALIAS:-}" ]] || missing+=("ANDROID_KEY_ALIAS")
+
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error::Missing Android release signing secrets: ${missing[*]}"
+            exit 1
+          fi
+
+          mkdir -p android/app
+          printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > android/app/release-keystore.jks
+          {
+            echo "storeFile=app/release-keystore.jks"
+            echo "storePassword=${ANDROID_KEYSTORE_PASSWORD}"
+            echo "keyAlias=${ANDROID_KEY_ALIAS}"
+            echo "keyPassword=${ANDROID_KEY_PASSWORD:-${ANDROID_KEYSTORE_PASSWORD}}"
+          } > android/key.properties
 
       - name: Analyze
         run: flutter analyze

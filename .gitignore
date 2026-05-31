@@ -46,3 +46,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android release signing material stays local or in GitHub Secrets.
+/android/key.properties
+/android/app/*.jks
+/android/app/*.keystore
