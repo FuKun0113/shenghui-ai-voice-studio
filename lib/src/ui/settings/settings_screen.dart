@@ -186,7 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   _VersionInfoCard(appState: widget.appState),
-                  _RepositoryLinkCard(),
+                  _OfficialLinksCard(),
                   _InfoSectionCard(
                     icon: HugeIcons.strokeRoundedPackage,
                     title: '服务说明',
@@ -1113,59 +1113,35 @@ class _AboutBrandCard extends StatelessWidget {
   }
 }
 
-class _RepositoryLinkCard extends StatelessWidget {
-  const _RepositoryLinkCard();
+class _OfficialLinksCard extends StatelessWidget {
+  const _OfficialLinksCard();
 
+  static const String _websiteUrl = 'https://shenghui.cloudlark.net/';
   static const String _repositoryUrl =
       'https://github.com/FuKun0113/shenghui-ai-voice-studio';
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => _openExternalUrl(_repositoryUrl),
-        child: AppPanel(
-          child: Row(
-            children: <Widget>[
-              AppHugeIcon(
-                HugeIcons.strokeRoundedGithub,
-                color: scheme.primary,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      '开源仓库',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _repositoryUrl,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              AppHugeIcon(
-                HugeIcons.strokeRoundedArrowUpRight01,
-                color: scheme.primary,
-              ),
-            ],
+    return AppPanel(
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: AppFlatActionButton(
+              icon: HugeIcons.strokeRoundedGlobe02,
+              label: '官网',
+              prominent: true,
+              onPressed: () => _openExternalUrl(_websiteUrl),
+            ),
           ),
-        ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: AppFlatActionButton(
+              icon: HugeIcons.strokeRoundedGithub,
+              label: '开源仓库',
+              onPressed: () => _openExternalUrl(_repositoryUrl),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1310,7 +1286,6 @@ class _VersionInfoCardBodyState extends State<_VersionInfoCardBody> {
               '当前版本 $currentVersion，最新版本 $latestVersion。',
               if (message.isNotEmpty) message,
               if (update.force) '这个版本需要更新后继续使用。',
-              if (updateUrl.isNotEmpty) updateUrl,
             ].join('\n\n'),
           ),
           actions: <Widget>[

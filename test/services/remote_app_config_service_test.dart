@@ -105,6 +105,43 @@ void main() {
     expect(config.appUpdate.latestVersion, '0.0.2');
     expect(config.enabledAdSlots.single.title, '底部入口');
   });
+
+  test('http product config service accepts website changelog json', () async {
+    final service = HttpRemoteAppConfigService(
+      configUrl: 'https://shenghui.cloudlark.net/api/changelog',
+      client: MockClient((request) async {
+        expect(
+          request.url.toString(),
+          'https://shenghui.cloudlark.net/api/changelog',
+        );
+        return http.Response.bytes(
+          utf8.encode('''
+          {
+            "success": true,
+            "latestVersion": "v0.0.3",
+            "changelog": [
+              {
+                "version": "v0.0.3",
+                "name": "声绘 0.0.3",
+                "description": "来自官网更新日志。",
+                "isLatest": true
+              }
+            ]
+          }
+          '''),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+
+    final config = await service.fetch();
+
+    expect(config.appUpdate.enabled, isTrue);
+    expect(config.appUpdate.latestVersion, 'v0.0.3');
+    expect(config.appUpdate.title, '声绘 0.0.3');
+    expect(config.appUpdate.updateUrl, RemoteAppUpdate.defaultUpdateUrl);
+  });
 }
 
 class FakeRemoteAppConfigService implements RemoteAppConfigService {

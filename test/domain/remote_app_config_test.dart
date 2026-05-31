@@ -69,4 +69,30 @@ void main() {
     expect(notice.acknowledgementKey, contains('公告'));
     expect(notice.acknowledgementKey, contains('内容'));
   });
+
+  test('parses website changelog endpoint as app update config', () {
+    final config = RemoteAppConfig.fromJson(<String, Object?>{
+      'success': true,
+      'latestVersion': 'v0.0.3',
+      'changelog': <Object?>[
+        <String, Object?>{
+          'version': 'v0.0.3',
+          'name': '声绘 0.0.3',
+          'description': '优化更新检测和下载入口。',
+          'isLatest': true,
+          'url':
+              'https://github.com/FuKun0113/shenghui-ai-voice-studio/releases/tag/v0.0.3',
+        },
+      ],
+    });
+
+    expect(config.appUpdate.enabled, isTrue);
+    expect(config.appUpdate.latestVersion, 'v0.0.3');
+    expect(config.appUpdate.title, '声绘 0.0.3');
+    expect(config.appUpdate.message, '优化更新检测和下载入口。');
+    expect(
+      config.appUpdate.updateUrl,
+      'https://shenghui.cloudlark.net/#download',
+    );
+  });
 }
