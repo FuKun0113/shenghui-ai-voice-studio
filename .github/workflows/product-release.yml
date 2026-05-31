@@ -146,8 +146,8 @@ jobs:
           done
 
           if [[ "${has_any_signing_secret}" == false ]]; then
-            echo "Android release signing secrets are empty. Release will fall back to debug signing."
-            exit 0
+            echo "::error::Android release signing secrets are required for Product Release. Generate the keystore locally, save it safely, then add it to GitHub Secrets."
+            exit 1
           fi
 
           missing=()
