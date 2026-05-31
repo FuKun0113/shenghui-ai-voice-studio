@@ -155,6 +155,17 @@ test/                   单元测试和 Widget 测试
   <img src="https://api.star-history.com/svg?repos=FuKun0113/shenghui-ai-voice-studio&type=Date" alt="Star History Chart">
 </a>
 
+## 支持项目
+
+如果声绘对你有帮助，欢迎通过打赏支持项目的持续开发和维护。打赏完全自愿，感谢每一份支持。
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/donate/alipay.jpg" width="260" alt="支付宝打赏码"><br>支付宝</td>
+    <td align="center"><img src="docs/images/donate/wechat-pay.png" width="260" alt="微信支付打赏码"><br>微信支付</td>
+  </tr>
+</table>
+
 ## 参与贡献
 
 欢迎提交 Issue 和 Pull Request。你可以帮助完善：
