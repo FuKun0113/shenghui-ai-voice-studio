@@ -7,6 +7,10 @@ on:
         description: "User-facing version, for example 1.0.1"
         required: true
         type: string
+      release_notes:
+        description: "Release notes shown in the GitHub Release"
+        required: true
+        type: string
       create_release:
         description: "Create a GitHub Release and upload APK/AAB"
         required: true
@@ -15,9 +19,6 @@ on:
 
 permissions:
   contents: write
-
-env:
-  BUILD_NUMBER_OFFSET: 1000
 
 concurrency:
   group: product-release
@@ -56,7 +57,7 @@ jobs:
             exit 1
           fi
 
-          build_number="$((GITHUB_RUN_NUMBER + BUILD_NUMBER_OFFSET))"
+          build_number="${GITHUB_RUN_NUMBER}"
 
           current_version="$(ruby -ne 'puts $1 if /^version:\s*(\S+)/' pubspec.yaml)"
           current_build="0"
@@ -72,20 +73,17 @@ jobs:
           if [[ -n "${config_url}" ]]; then
             echo "::add-mask::${config_url}"
             echo "Product config URL is set."
-            config_status="已启用远程配置"
           else
             echo "Product config URL is empty. Building without remote promotion or popup config."
-            config_status="未配置远程配置，构建干净包"
           fi
 
-          previous_tag="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
           tag="v${VERSION_NAME}"
           if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
             echo "Release tag ${tag} already exists." >&2
             exit 1
           fi
 
-          artifact_slug="shenghui-${VERSION_NAME}+${build_number}"
+          artifact_slug="shenghui-${VERSION_NAME}"
 
           {
             echo "PRODUCT_CONFIG_URL<<EOF"
@@ -97,8 +95,6 @@ jobs:
           echo "build=${build_number}" >> "${GITHUB_OUTPUT}"
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
           echo "artifact_slug=${artifact_slug}" >> "${GITHUB_OUTPUT}"
-          echo "config_status=${config_status}" >> "${GITHUB_OUTPUT}"
-          echo "previous_tag=${previous_tag}" >> "${GITHUB_OUTPUT}"
 
       - name: Set product version
         env:
@@ -154,21 +150,11 @@ jobs:
         env:
           VERSION_NAME: ${{ steps.release.outputs.version }}
           BUILD_NUMBER: ${{ steps.release.outputs.build }}
-          TAG_NAME: ${{ steps.release.outputs.tag }}
-          PREVIOUS_TAG: ${{ steps.release.outputs.previous_tag }}
           ARTIFACT_SLUG: ${{ steps.release.outputs.artifact_slug }}
-          CONFIG_STATUS: ${{ steps.release.outputs.config_status }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
         shell: bash
         run: |
           set -euo pipefail
-
-          if [[ -n "${PREVIOUS_TAG}" ]]; then
-            changelog_range="${PREVIOUS_TAG}..HEAD"
-            compare_url="https://github.com/${GITHUB_REPOSITORY}/compare/${PREVIOUS_TAG}...${TAG_NAME}"
-          else
-            changelog_range="HEAD"
-            compare_url="https://github.com/${GITHUB_REPOSITORY}/commits/${TAG_NAME}"
-          fi
 
           {
             echo "## 本次发布"
@@ -176,7 +162,6 @@ jobs:
             echo "- 版本：\`${VERSION_NAME}\`"
             echo "- 构建号：\`${BUILD_NUMBER}\`"
             echo "- 构建分支：\`main\`"
-            echo "- 远程配置：${CONFIG_STATUS}"
             echo
             echo "## 下载"
             echo
@@ -186,31 +171,16 @@ jobs:
             echo
             echo "## 更新内容"
             echo
+            printf '%s\n' "${RELEASE_NOTES}"
           } > release-notes.md
-
-          git log --pretty=format:'- %s (`%h`)' "${changelog_range}" \
-            | grep -v '^- chore: release ' > release-commits.md || true
-          if [[ -s release-commits.md ]]; then
-            cat release-commits.md >> release-notes.md
-          else
-            echo "- 本次发布主要包含版本构建和安装包产物更新。" >> release-notes.md
-          fi
-
-          {
-            echo
-            echo "## 完整变更"
-            echo
-            echo "${compare_url}"
-          } >> release-notes.md
 
       - name: Commit product version and tag
         env:
           TAG_NAME: ${{ steps.release.outputs.tag }}
           VERSION_NAME: ${{ steps.release.outputs.version }}
-          BUILD_NUMBER: ${{ steps.release.outputs.build }}
         run: |
           git add pubspec.yaml pubspec.lock
-          git commit -m "chore: release v${VERSION_NAME}+${BUILD_NUMBER}"
+          git commit -m "chore: release v${VERSION_NAME}"
           git tag -a "${TAG_NAME}" -m "Release v${VERSION_NAME}"
           git push origin HEAD:main
           git push origin "${TAG_NAME}"
