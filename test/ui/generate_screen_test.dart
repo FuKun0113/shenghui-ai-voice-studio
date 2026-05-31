@@ -223,6 +223,31 @@ void main() {
     expect(state.draftText, '(粤语 粤语)欢迎使用 AI 语音工作台。[轻笑]');
   });
 
+  testWidgets('style tags are inserted at the current line start', (
+    tester,
+  ) async {
+    final state = AppState(mimoService: MockMimoService());
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: GenerateScreen(appState: state)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final draftField = find.byKey(const Key('draftTextField'));
+    await tester.enterText(draftField, '第一句。\n第二句。');
+    final textField = tester.widget<TextField>(draftField);
+    textField.controller?.selection = const TextSelection.collapsed(offset: 5);
+
+    await tester.tap(find.text('插入标签'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('粤语'));
+    await tester.pumpAndSettle();
+
+    expect(textField.controller?.text, '第一句。\n(粤语)第二句。');
+    expect(state.draftText, '第一句。\n(粤语)第二句。');
+  });
+
   testWidgets('tag guide opens and applies an advanced example', (
     tester,
   ) async {

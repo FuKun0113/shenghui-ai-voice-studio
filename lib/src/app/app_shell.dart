@@ -6,6 +6,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../domain/remote_app_config.dart';
+import '../services/audio_playback_service.dart';
 import '../services/local_popup_notice_store.dart';
 import '../state/app_state.dart';
 import '../ui/generate/generate_screen.dart';
@@ -14,10 +15,16 @@ import '../ui/settings/settings_screen.dart';
 import '../ui/voices/voice_library_screen.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, required this.appState, this.popupNoticeStore});
+  AppShell({
+    super.key,
+    required this.appState,
+    this.popupNoticeStore,
+    AudioPlaybackController? playbackService,
+  }) : playbackService = playbackService ?? AudioPlaybackService.instance;
 
   final AppState appState;
   final LocalPopupNoticeStore? popupNoticeStore;
+  final AudioPlaybackController playbackService;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -51,7 +58,10 @@ class _AppShellState extends State<AppShell> {
         appState: widget.appState,
         onOpenSettings: () => setState(() => _index = 3),
       ),
-      VoiceLibraryScreen(appState: widget.appState),
+      VoiceLibraryScreen(
+        appState: widget.appState,
+        playbackService: widget.playbackService,
+      ),
       HistoryScreen(
         appState: widget.appState,
         onReuseText: (_) => setState(() => _index = 0),
@@ -91,7 +101,7 @@ class _AppShellState extends State<AppShell> {
       ),
       bottomNavigationBar: _FlatBottomNavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
+        onDestinationSelected: _selectDestination,
         items: const <_FlatNavItem>[
           _FlatNavItem(
             label: '生成',
@@ -116,6 +126,13 @@ class _AppShellState extends State<AppShell> {
         ],
       ),
     );
+  }
+
+  void _selectDestination(int value) {
+    if (_index == 1 && value != 1) {
+      unawaited(widget.playbackService.stop());
+    }
+    setState(() => _index = value);
   }
 
   void _schedulePopupNotice() {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -10,9 +12,14 @@ import '../widgets/voice_card.dart';
 import 'voice_creation_sheet.dart';
 
 class VoiceLibraryScreen extends StatefulWidget {
-  const VoiceLibraryScreen({super.key, required this.appState});
+  VoiceLibraryScreen({
+    super.key,
+    required this.appState,
+    AudioPlaybackController? playbackService,
+  }) : playbackService = playbackService ?? AudioPlaybackService.instance;
 
   final AppState appState;
+  final AudioPlaybackController playbackService;
 
   @override
   State<VoiceLibraryScreen> createState() => _VoiceLibraryScreenState();
@@ -31,13 +38,14 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
   void initState() {
     super.initState();
     widget.appState.addListener(_sync);
-    AudioPlaybackService.instance.playbackState.addListener(_syncPlayback);
+    widget.playbackService.playbackState.addListener(_syncPlayback);
   }
 
   @override
   void dispose() {
     widget.appState.removeListener(_sync);
-    AudioPlaybackService.instance.playbackState.removeListener(_syncPlayback);
+    widget.playbackService.playbackState.removeListener(_syncPlayback);
+    unawaited(widget.playbackService.stop());
     _searchController.dispose();
     super.dispose();
   }
@@ -45,7 +53,7 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
   void _sync() => setState(() {});
 
   void _syncPlayback() {
-    final state = AudioPlaybackService.instance.playbackState.value;
+    final state = widget.playbackService.playbackState.value;
     final shouldClear = shouldClearVoicePreview(
       playingVoicePath: _playingVoicePath,
       playback: state,
@@ -61,6 +69,7 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
   }
 
   void _openCreationSheet() {
+    unawaited(widget.playbackService.stop());
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => VoiceCreationScreen(appState: widget.appState),
@@ -70,7 +79,7 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
 
   Future<void> _togglePreview(Voice voice) async {
     if (_playingVoiceId == voice.id) {
-      await AudioPlaybackService.instance.stop();
+      await widget.playbackService.stop();
       if (mounted) {
         setState(() {
           _playingVoiceId = null;
@@ -89,7 +98,7 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       if (voice.previewAudioPath != null) {
-        await AudioPlaybackService.instance.playFile(voice.previewAudioPath!);
+        await widget.playbackService.playFile(voice.previewAudioPath!);
         if (mounted) setState(() => _startingPreviewVoiceId = null);
         return;
       }
@@ -97,7 +106,7 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
       if (mounted) {
         setState(() => _playingVoicePath = audio.audioPath);
       }
-      await AudioPlaybackService.instance.playFile(audio.audioPath);
+      await widget.playbackService.playFile(audio.audioPath);
       if (mounted) setState(() => _startingPreviewVoiceId = null);
     } on Object catch (error) {
       if (mounted) {

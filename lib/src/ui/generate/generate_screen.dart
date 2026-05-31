@@ -1000,9 +1000,12 @@ void _insertStyleTagIntoController(
   final text = controller.text;
   final selection = controller.selection;
   final originalOffset = selection.isValid
-      ? selection.baseOffset.clamp(0, text.length).toInt()
+      ? selection.start.clamp(0, text.length).toInt()
       : text.length;
-  final leadingStyle = RegExp(r'^\s*[\(（]([^\)）]*)[\)）]').firstMatch(text);
+  final lineStart = _lineStartForOffset(text, originalOffset);
+  final leadingStyle = RegExp(
+    r'^[ \t]*[\(（]([^\)）\r\n]*)[\)）]',
+  ).firstMatch(text.substring(lineStart));
   if (leadingStyle != null) {
     final tags = leadingStyle
         .group(1)!
@@ -1011,13 +1014,15 @@ void _insertStyleTagIntoController(
         .toList();
     tags.add(tag);
     final token = '(${tags.join(' ')})';
-    final delta = token.length - (leadingStyle.end - leadingStyle.start);
-    final nextOffset = originalOffset >= leadingStyle.end
+    final replaceStart = lineStart + leadingStyle.start;
+    final replaceEnd = lineStart + leadingStyle.end;
+    final delta = token.length - (replaceEnd - replaceStart);
+    final nextOffset = originalOffset >= replaceEnd
         ? originalOffset + delta
-        : token.length;
+        : replaceStart + token.length;
     _setControllerText(
       controller,
-      text.replaceRange(leadingStyle.start, leadingStyle.end, token),
+      text.replaceRange(replaceStart, replaceEnd, token),
       selectionOffset: nextOffset,
     );
     return;
@@ -1025,9 +1030,16 @@ void _insertStyleTagIntoController(
   final token = '($tag)';
   _setControllerText(
     controller,
-    '$token$text',
+    text.replaceRange(lineStart, lineStart, token),
     selectionOffset: originalOffset + token.length,
   );
+}
+
+int _lineStartForOffset(String text, int offset) {
+  final safeOffset = offset.clamp(0, text.length).toInt();
+  if (safeOffset == 0) return 0;
+  final previousNewline = text.lastIndexOf('\n', safeOffset - 1);
+  return previousNewline < 0 ? 0 : previousNewline + 1;
 }
 
 void _insertAudioTagIntoController(
@@ -1065,13 +1077,19 @@ void _setControllerText(
 }
 
 Set<String> _selectedStyleTagsInText(String text) {
-  final leadingStyle = RegExp(r'^\s*[\(（]([^\)）]*)[\)）]').firstMatch(text);
-  if (leadingStyle == null) return const <String>{};
-  return leadingStyle
-      .group(1)!
-      .split(RegExp(r'[，,\s|｜]+'))
-      .where((item) => item.trim().isNotEmpty)
-      .toSet();
+  final tags = <String>{};
+  final matches = RegExp(
+    r'(^|\n)[ \t]*[\(（]([^\)）\r\n]*)[\)）]',
+  ).allMatches(text);
+  for (final match in matches) {
+    tags.addAll(
+      match
+          .group(2)!
+          .split(RegExp(r'[，,\s|｜]+'))
+          .where((item) => item.trim().isNotEmpty),
+    );
+  }
+  return tags;
 }
 
 Set<String> _selectedAudioTagsInText(String text) {
@@ -1415,7 +1433,7 @@ class _MimoTagInsertSheetState extends State<_MimoTagInsertSheet> {
                 const SizedBox(height: 14),
                 const SectionHeader(
                   title: '插入标签',
-                  subtitle: '风格标签会合并到文本开头，音频标签会插入到当前光标位置。',
+                  subtitle: '风格标签会插入到当前行开头，音频标签会插入到当前光标位置。',
                 ),
                 const SizedBox(height: 14),
                 _QuickTagRows(
