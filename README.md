@@ -176,6 +176,9 @@ test/                   单元测试和 Widget 测试
 - 多端适配
 - 测试覆盖
 
+## 致谢
+感谢 [Linux.do 社区](https://linux.do/) 
+
 ## 开源协议
 
 本项目使用 Apache License 2.0。详见 [LICENSE](LICENSE)。
